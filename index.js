@@ -183,7 +183,6 @@ app.post('/login', async (req, res) => {
       res.send({ success: false, message: '伺服器錯誤' })
     }
   }
-  console.log('使用者登入 : ' + req.body.account)
 })
 
 app.delete('/logout', async (req, res) => {
@@ -197,8 +196,6 @@ app.delete('/logout', async (req, res) => {
       res.send({ success: true, message: '' })
     }
   })
-
-  console.log('使用者登出 : ' + req.body.account)
 })
 
 app.get('/heartbeat', async (req, res) => {
@@ -209,13 +206,11 @@ app.get('/heartbeat', async (req, res) => {
 
   res.status(200)
   res.send(isLogin)
-  // console.log(req.session)
 })
 
 app.post('/file', async (req, res) => {
   // 沒有登入
   if (req.session.user === undefined) {
-    console.log(req.session.user)
     res.status(401)
     res.send({ success: false, message: '未登入' })
     return
@@ -240,7 +235,6 @@ app.post('/file', async (req, res) => {
       } else {
         message = '格式不符'
       }
-
       res.status(400)
       res.send({ success: false, message })
     } else if (error) {
@@ -248,6 +242,8 @@ app.post('/file', async (req, res) => {
       res.send({ success: false, message: '伺服器錯誤' })
     } else {
       try {
+        // 檔案上傳成功的時候要把資料進DB
+
         let name = ''
         if (process.env.FTP === 'true') {
           name = path.basename(req.file.path)
