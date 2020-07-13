@@ -8,7 +8,7 @@ import md5 from 'md5'
 import dotenv from 'dotenv'
 import path from 'path'
 import FTPStorage from 'multer-ftp'
-import fs from 'fs'
+// import fs from 'fs'
 // import fsx from 'fs-extra'
 
 import db from './db.js'
@@ -82,7 +82,7 @@ if (process.env.FTP === 'false') {
   // heroku 將上傳檔案放伺服器
   storage = new FTPStorage({
     // 上傳伺服器的路徑
-    basepath: '/',
+    basepath: process.env.FTP_FILE_PATH,
     ftp: {
       host: process.env.FTP_HOST,
       secure: false,
@@ -208,7 +208,7 @@ app.get('/heartbeat', async (req, res) => {
   res.send(isLogin)
 })
 
-app.post('/file', async (req, res) => {
+app.post('/pages', async (req, res) => {
   // 沒有登入
   if (req.session.user === undefined) {
     res.status(401)
@@ -242,24 +242,25 @@ app.post('/file', async (req, res) => {
       res.send({ success: false, message: '伺服器錯誤' })
     } else {
       try {
-        // 檔案上傳成功的時候要把資料進DB
-
         let name = ''
         if (process.env.FTP === 'true') {
           name = path.basename(req.file.path)
         } else {
           name = req.file.filename
         }
-        const result = await db.files.create(
+        // 檔案上傳成功的時候要把資料進DB
+        const result = await db.pages.findOneAndUpdate(
           {
-            user: req.session.user,
+            item: req.body.item
+          }, {
+            filepath: process.env.FTP_FILE_PATH + name,
+            isShow: req.body.show,
             description: req.body.description,
-            name
+            link: req.body.link
           }
         )
-
         res.status(200)
-        res.send({ success: true, message: '', name, _id: result._id })
+        res.send({ success: true, message: '圖片上傳成功', name, _id: result._id })
       } catch (error) {
         if (error.name === 'ValidationError') {
           // 資料格式錯誤
@@ -277,28 +278,48 @@ app.post('/file', async (req, res) => {
   })
 })
 
-app.get('/file/:name', async (req, res) => {
+// pages的資料
+app.get('/pages/:item', async (req, res) => {
   if (req.session.user === undefined) {
     res.status(401)
     res.send({ success: false, message: '未登入' })
     return
   }
-  if (process.env.FTP === 'false') {
-    const path = process.cwd() + '/images/' + req.params.name
-    const exists = fs.existsSync(path)
 
-    if (exists) {
-      res.status(200)
-      res.sendFile(path)
-    } else {
-      res.status(404)
-      res.send({ success: false, message: '找不到圖片' })
-    }
-  } else {
-    res.redirect('http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + '/' + req.params.name)
+  const result = await db.pages.findOne({ item: req.params.item })
+
+  if (result === null) {
+    // 如果資料庫沒有資料
+    res.status(404)
+    res.send({ success: false, message: '找不到圖片' })
+    return
   }
+
+  res.status(200)
+  res.send({
+    success: true,
+    description: result.description,
+    link: result.link,
+    src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + result.filepath,
+    show: result.isShow
+  })
 })
 
+// pages的圖片api
+app.get('/img/:item', async (req, res) => {
+  const result = await db.pages.findOne({ item: req.params.item })
+
+  if (result === null) {
+    // 如果資料庫沒有資料
+    res.status(404)
+    res.send({ success: false, message: '找不到圖片' })
+    return
+  }
+
+  res.redirect('http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + result.filepath)
+})
+
+// 以下是上課寫的--------------------------------------------------------------------------------------
 app.get('/album/:user', async (req, res) => {
   if (req.session.user === undefined) {
     res.status(401)
@@ -353,7 +374,6 @@ app.delete('/file/:id', async (req, res) => {
       res.status(400)
       res.send({ success: false })
     } else {
-      console.log(error)
       // 伺服器錯誤
       res.status(500)
       res.send({ success: false, message: '伺服器錯誤' })
