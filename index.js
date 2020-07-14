@@ -231,7 +231,9 @@ app.patch('/pages/:item', async (req, res) => {
       }, {
         show: req.body.show,
         description: req.body.description,
-        link: req.body.link
+        link: req.body.link,
+        title: req.body.title,
+        subtitle: req.body.subtitle
       }
     )
     res.status(200)
@@ -341,7 +343,9 @@ app.get('/pages', async (req, res) => {
       src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.filepath,
       description: value.description,
       link: value.link,
-      show: value.show
+      show: value.show,
+      title: value.title,
+      subtitle: value.subtitle
     })
   }
 
@@ -375,7 +379,9 @@ app.get('/pages/area/:area', async (req, res) => {
       src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.filepath,
       description: value.description,
       link: value.link,
-      show: value.show
+      show: value.show,
+      title: value.title,
+      subtitle: value.subtitle
     })
   }
 
@@ -404,7 +410,9 @@ app.get('/pages/path/:path', async (req, res) => {
       src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.filepath,
       description: value.description,
       link: value.link,
-      show: value.show
+      show: value.show,
+      title: value.title,
+      subtitle: value.subtitle
     })
   }
 

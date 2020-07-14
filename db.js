@@ -73,6 +73,12 @@ const pageSchema = new Schema({
     type: Boolean,
     required: [true, '沒有設定是否顯示'],
     default: true
+  },
+  title: {
+    type: String
+  },
+  subtitle: {
+    type: String
   }
 }, {
   versionKey: false
