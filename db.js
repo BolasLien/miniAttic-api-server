@@ -69,7 +69,7 @@ const pageSchema = new Schema({
     // 例如: http://google.com/ / /about
     type: String
   },
-  isShow: {
+  show: {
     type: Boolean,
     required: [true, '沒有設定是否顯示'],
     default: true
