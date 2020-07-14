@@ -209,7 +209,7 @@ app.get('/heartbeat', async (req, res) => {
 })
 
 // 內容編輯更新
-app.patch('/pages/:item', async (req, res) => {
+app.patch('/pages/:area/:item', async (req, res) => {
   // 沒有登入
   if (req.session.user === undefined) {
     res.status(401)
@@ -225,8 +225,9 @@ app.patch('/pages/:item', async (req, res) => {
 
   try {
     // 資料更新成功的時候要把資料進DB
-    await db.pages.findOneAndUpdate(
+    const result = await db.pages.findOneAndUpdate(
       {
+        area: req.params.area,
         item: req.params.item
       }, {
         show: req.body.show,
@@ -236,6 +237,9 @@ app.patch('/pages/:item', async (req, res) => {
         subtitle: req.body.subtitle
       }
     )
+
+    console.log(req.body.title)
+    console.log(result)
     res.status(200)
     res.send({ success: true, message: '資料更新成功' })
   } catch (error) {
@@ -375,6 +379,7 @@ app.get('/pages/area/:area', async (req, res) => {
   const datas = []
   for (const value of result) {
     datas.push({
+      area: value.area,
       item: value.item,
       src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.filepath,
       description: value.description,
