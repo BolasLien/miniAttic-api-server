@@ -208,7 +208,51 @@ app.get('/heartbeat', async (req, res) => {
   res.send(isLogin)
 })
 
-app.post('/pages', async (req, res) => {
+// 內容編輯更新
+app.patch('/pages/:item', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+  // 格式不符
+  if (!req.headers['content-type'].includes('application/json')) {
+    res.status(400)
+    res.send({ success: false, message: '格式不符' })
+    return
+  }
+
+  try {
+    // 資料更新成功的時候要把資料進DB
+    await db.pages.findOneAndUpdate(
+      {
+        item: req.params.item
+      }, {
+        show: req.body.show,
+        description: req.body.description,
+        link: req.body.link
+      }
+    )
+    res.status(200)
+    res.send({ success: true, message: '資料更新成功' })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 圖片上傳
+app.post('/pages/:item', async (req, res) => {
   // 沒有登入
   if (req.session.user === undefined) {
     res.status(401)
@@ -248,19 +292,18 @@ app.post('/pages', async (req, res) => {
         } else {
           name = req.file.filename
         }
+
         // 檔案上傳成功的時候要把資料進DB
-        const result = await db.pages.findOneAndUpdate(
+        await db.pages.findOneAndUpdate(
           {
-            item: req.body.item
+            item: req.params.item
           }, {
-            filepath: process.env.FTP_FILE_PATH + name,
-            isShow: req.body.show,
-            description: req.body.description,
-            link: req.body.link
+            filepath: process.env.FTP_FILE_PATH + name
           }
         )
+
         res.status(200)
-        res.send({ success: true, message: '圖片上傳成功', name, _id: result._id })
+        res.send({ success: true, message: '圖片上傳成功', name })
       } catch (error) {
         if (error.name === 'ValidationError') {
           // 資料格式錯誤
@@ -278,7 +321,100 @@ app.post('/pages', async (req, res) => {
   })
 })
 
-// pages的資料
+// pages的資料 全部
+app.get('/pages', async (req, res) => {
+  const result = await db.pages.find()
+
+  if (result === null) {
+    // 如果資料庫沒有資料
+    res.status(404)
+    res.send({ success: false, message: '找不到資料' })
+    return
+  }
+
+  const datas = []
+  for (const value of result) {
+    datas.push({
+      path: value.path,
+      area: value.area,
+      item: value.item,
+      src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.filepath,
+      description: value.description,
+      link: value.link,
+      show: value.show
+    })
+  }
+
+  res.status(200)
+  res.send({
+    datas
+  })
+})
+
+// pages的資料 area資料
+app.get('/pages/area/:area', async (req, res) => {
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+
+  const result = await db.pages.find({ area: req.params.area })
+
+  if (result === null) {
+    // 如果資料庫沒有資料
+    res.status(404)
+    res.send({ success: false, message: '找不到圖片' })
+    return
+  }
+
+  const datas = []
+  for (const value of result) {
+    datas.push({
+      item: value.item,
+      src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.filepath,
+      description: value.description,
+      link: value.link,
+      show: value.show
+    })
+  }
+
+  res.status(200)
+  res.send({
+    datas
+  })
+})
+
+// pages的資料 path資料
+app.get('/pages/path/:path', async (req, res) => {
+  const result = await db.pages.find({ path: req.params.path })
+
+  if (result === null) {
+    // 如果資料庫沒有資料
+    res.status(404)
+    res.send({ success: false, message: '找不到資料' })
+    return
+  }
+
+  const datas = []
+  for (const value of result) {
+    datas.push({
+      area: value.area,
+      item: value.item,
+      src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.filepath,
+      description: value.description,
+      link: value.link,
+      show: value.show
+    })
+  }
+
+  res.status(200)
+  res.send({
+    datas
+  })
+})
+
+// pages的資料 單筆資料
 app.get('/pages/:item', async (req, res) => {
   if (req.session.user === undefined) {
     res.status(401)
@@ -301,7 +437,7 @@ app.get('/pages/:item', async (req, res) => {
     description: result.description,
     link: result.link,
     src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + result.filepath,
-    show: result.isShow
+    show: result.show
   })
 })
 
