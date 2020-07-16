@@ -85,14 +85,52 @@ const pageSchema = new Schema({
 }
 )
 
+const productSchema = new Schema({
+  item: {
+    type: String,
+    required: [true, '沒有這個商品']
+  },
+  class: {
+    type: String
+  },
+  img: {
+    // 例如: /images/xxx.jpg 或 /miniattic/assets/img/xxx.jpg
+    type: String,
+    default: '/1594090312145.jpg'
+  },
+  name: {
+    type: String
+  },
+  subheading: {
+    type: String
+  },
+  intro: {
+    type: String
+  },
+  price: {
+    type: String
+  },
+  description: {
+    type: String
+  },
+  show: {
+    type: Boolean,
+    default: false
+  }
+}, {
+  versionKey: false
+})
+
 const users = mongoose.model(process.env.COLLECTION_USER, userSchema)
 const files = mongoose.model(process.env.COLLECTION_FILE, fileSchema)
 const pages = mongoose.model(process.env.COLLECTION_PAGE, pageSchema)
+const products = mongoose.model(process.env.COLLECTION_PRODUCT, productSchema)
 const connection = mongoose.connection
 
 export default {
   users,
   files,
   pages,
+  products,
   connection
 }
