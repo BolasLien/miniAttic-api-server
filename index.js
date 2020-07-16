@@ -257,76 +257,6 @@ app.patch('/pages/:area/:item', async (req, res) => {
   }
 })
 
-// 圖片上傳
-app.post('/pages/:item', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
-  // 格式不符
-  if (!req.headers['content-type'].includes('multipart/form-data')) {
-    res.status(400)
-    res.send({ success: false, message: '格式不符' })
-    return
-  }
-
-  // 有一個上傳進來的檔案，欄位是 image
-  // req，進來的東西
-  // res，要出去的東西
-  // err，檔案上傳的錯誤
-  // upload.single(欄位)(req, res, 上傳完畢的 function)
-  upload.single('image')(req, res, async error => {
-    if (error instanceof multer.MulterError) {
-      let message = ''
-      if (error.code === 'LIMIT_FILE_SIZE') {
-        message = '檔案太大'
-      } else {
-        message = '格式不符'
-      }
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error) {
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    } else {
-      try {
-        let name = ''
-        if (process.env.FTP === 'true') {
-          name = path.basename(req.file.path)
-        } else {
-          name = req.file.filename
-        }
-
-        // 檔案上傳成功的時候要把資料進DB
-        await db.pages.findOneAndUpdate(
-          {
-            item: req.params.item
-          }, {
-            filepath: process.env.FTP_FILE_PATH + name
-          }
-        )
-
-        res.status(200)
-        res.send({ success: true, message: '圖片上傳成功', name })
-      } catch (error) {
-        if (error.name === 'ValidationError') {
-          // 資料格式錯誤
-          const key = Object.keys(error.errors)[0]
-          const message = error.errors[key].message
-          res.status(400)
-          res.send({ success: false, message })
-        } else {
-          // 伺服器錯誤
-          res.status(500)
-          res.send({ success: false, message: '伺服器錯誤' })
-        }
-      }
-    }
-  })
-})
-
 // pages的資料 全部
 app.get('/pages', async (req, res) => {
   const result = await db.pages.find()
@@ -464,8 +394,123 @@ app.get('/img/:item', async (req, res) => {
     res.send({ success: false, message: '找不到圖片' })
     return
   }
-
   res.redirect('http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + result.filepath)
+})
+
+// 新增商品
+app.post('/product', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+  // 格式不符
+  if (!req.headers['content-type'].includes('application/json')) {
+    res.status(400)
+    res.send({ success: false, message: '格式不符' })
+    return
+  }
+
+  try {
+    const result = await db.products.create(
+      {
+        item: Date.now(),
+        class: req.body.class,
+        name: req.body.name,
+        subheading: req.body.subheading,
+        intro: req.body.intro,
+        price: req.body.price,
+        description: req.body.description,
+        show: req.body.show
+      }
+    )
+
+    res.status(200)
+    res.send({ success: true, message: '資料建立成功', result })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 上傳圖片
+app.post('/img/:id', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+  // 格式不符
+  if (!req.headers['content-type'].includes('multipart/form-data')) {
+    res.status(400)
+    res.send({ success: false, message: '格式不符' })
+    return
+  }
+
+  upload.single('image')(req, res, async error => {
+    if (error instanceof multer.MulterError) {
+      let message = ''
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        message = '檔案太大'
+      } else {
+        message = '格式不符'
+      }
+      res.status(400)
+      res.send({ success: false, message })
+    } else if (error) {
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    } else {
+      try {
+        let name = ''
+        if (process.env.FTP === 'true') {
+          name = path.basename(req.file.path)
+        } else {
+          name = req.file.filename
+        }
+
+        // 檔案上傳成功的時候要把資料進DB
+        // req.body.collection 要更動哪個db_collection
+        if (req.body.collection === 'product') {
+          await db.products.findOneAndUpdate(
+            { item: req.params.id },
+            { img: process.env.FTP_FILE_PATH + name }
+          )
+        } else if (req.body.collection === 'page') {
+          await db.pages.findOneAndUpdate(
+            { item: req.params.id },
+            { filepath: process.env.FTP_FILE_PATH + name }
+          )
+        }
+
+        res.status(200)
+        res.send({ success: true, message: '圖片上傳成功', name })
+      } catch (error) {
+        if (error.name === 'ValidationError') {
+          // 資料格式錯誤
+          const key = Object.keys(error.errors)[0]
+          const message = error.errors[key].message
+          res.status(400)
+          res.send({ success: false, message })
+        } else {
+          // 伺服器錯誤
+          res.status(500)
+          res.send({ success: false, message: '伺服器錯誤' })
+        }
+      }
+    }
+  })
 })
 
 // 以下是上課寫的--------------------------------------------------------------------------------------
