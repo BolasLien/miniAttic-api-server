@@ -259,34 +259,41 @@ app.patch('/pages/:area/:item', async (req, res) => {
 
 // pages的資料 全部
 app.get('/pages', async (req, res) => {
-  const result = await db.pages.find()
+  try {
+    const result = await db.pages.find()
 
-  if (result === null) {
-    // 如果資料庫沒有資料
-    res.status(404)
-    res.send({ success: false, message: '找不到資料' })
-    return
-  }
+    const datas = []
+    for (const value of result) {
+      datas.push({
+        path: value.path,
+        area: value.area,
+        item: value.item,
+        src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.filepath,
+        description: value.description,
+        link: value.link,
+        show: value.show,
+        title: value.title,
+        subtitle: value.subtitle
+      })
+    }
 
-  const datas = []
-  for (const value of result) {
-    datas.push({
-      path: value.path,
-      area: value.area,
-      item: value.item,
-      src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.filepath,
-      description: value.description,
-      link: value.link,
-      show: value.show,
-      title: value.title,
-      subtitle: value.subtitle
+    res.status(200)
+    res.send({
+      success: true, message: '資料查詢成功', datas
     })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
   }
-
-  res.status(200)
-  res.send({
-    datas
-  })
 })
 
 // pages的資料 area資料
@@ -398,7 +405,7 @@ app.get('/img/:item', async (req, res) => {
 })
 
 // 新增商品
-app.post('/product', async (req, res) => {
+app.post('/products', async (req, res) => {
   // 沒有登入
   if (req.session.user === undefined) {
     res.status(401)
@@ -429,6 +436,92 @@ app.post('/product', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '資料建立成功', result })
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 取得商品
+app.get('/products', async (req, res) => {
+  try {
+    const result = await db.products.find()
+
+    const datas = []
+    for (const value of result) {
+      datas.push({
+        item: value.item,
+        src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.img,
+        class: value.class,
+        name: value.name,
+        show: value.show,
+        subheading: value.subheading,
+        intro: value.intro,
+        price: value.price,
+        description: value.description
+      })
+    }
+
+    res.status(200)
+    res.send({ success: true, message: '資料查詢成功', datas })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 更新商品
+app.patch('/products/:item', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+  // 格式不符
+  if (!req.headers['content-type'].includes('application/json')) {
+    res.status(400)
+    res.send({ success: false, message: '格式不符' })
+    return
+  }
+
+  try {
+    const result = await db.products.findOneAndUpdate(
+      {
+        item: req.params.item
+      },
+      {
+        class: req.body.class,
+        name: req.body.name,
+        subheading: req.body.subheading,
+        intro: req.body.intro,
+        price: req.body.price,
+        description: req.body.description,
+        show: req.body.show
+      }
+    )
+
+    res.status(200)
+    res.send({ success: true, message: '商品更新成功', result })
+  } catch (error) {
+    console.log(error)
     if (error.name === 'ValidationError') {
       // 資料格式錯誤
       const key = Object.keys(error.errors)[0]
