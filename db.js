@@ -42,27 +42,23 @@ const fileSchema = new Schema({
 })
 
 const pageSchema = new Schema({
-  path: {
-    // 例如: home 或 about
-    type: String,
-    required: [true, '沒有路徑']
-  },
-  area: {
-    // 例如: carousel 或 intro
-    type: String,
-    required: [true, '沒有區塊']
-  },
   item: {
-    // 例如: carousel-item-1 或 intro-item-1
+    // 例如: carousel-item-1 或 intro-title
     type: String,
     required: [true, '沒有指定item']
   },
-  filepath: {
+  img: {
     // 例如: /images/xxx.jpg 或 /miniattic/assets/img/xxx.jpg
     type: String,
     required: [true, '沒有檔案路徑']
   },
-  description: {
+  description1: {
+    type: String
+  },
+  description2: {
+    type: String
+  },
+  description3: {
     type: String
   },
   link: {
@@ -73,12 +69,6 @@ const pageSchema = new Schema({
     type: Boolean,
     required: [true, '沒有設定是否顯示'],
     default: true
-  },
-  title: {
-    type: String
-  },
-  subtitle: {
-    type: String
   }
 }, {
   versionKey: false
