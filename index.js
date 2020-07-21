@@ -547,6 +547,112 @@ app.post('/img/:item', async (req, res) => {
   })
 })
 
+// 拿商品分類
+app.get('/categorys', async (req, res) => {
+  try {
+    const datas = await db.categorys.find()
+
+    res.status(200)
+    res.send({ success: true, message: '資料查詢成功', datas })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 更新商品分類
+app.patch('/categorys/:item', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+  // 格式不符
+  if (!req.headers['content-type'].includes('application/json')) {
+    res.status(400)
+    res.send({ success: false, message: '格式不符' })
+    return
+  }
+
+  try {
+    // 資料更新成功的時候要把資料進DB
+    await db.categorys.findOneAndUpdate(
+      { item: req.params.item },
+      {
+        name: req.body.name,
+        show: req.body.show
+      }
+    )
+
+    res.status(200)
+    res.send({ success: true, message: '資料更新成功' })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 創建商品分類
+app.post('/categorys', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+  // 格式不符
+  if (!req.headers['content-type'].includes('application/json')) {
+    res.status(400)
+    res.send({ success: false, message: '格式不符' })
+    return
+  }
+
+  try {
+    const result = await db.categorys.create(
+      {
+        item: req.body.item,
+        name: req.body.name,
+        show: req.body.show
+      }
+    )
+
+    res.status(200)
+    res.send({ success: true, message: '資料建立成功', result })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 前台拿網頁資料
 app.get('/webdata', async (req, res) => {
   try {
     // 拿頁面資料

@@ -72,13 +72,12 @@ const pageSchema = new Schema({
   }
 }, {
   versionKey: false
-}
-)
+})
 
 const productSchema = new Schema({
   item: {
     type: String,
-    required: [true, '沒有這個商品']
+    required: [true, '沒有商品item']
   },
   class: {
     type: String
@@ -111,10 +110,28 @@ const productSchema = new Schema({
   versionKey: false
 })
 
+const categorySchema = new Schema({
+  item: {
+    type: String,
+    required: [true, '沒有分類item']
+  },
+  name: {
+    type: String,
+    default: '尚未定義名稱'
+  },
+  show: {
+    type: Boolean,
+    default: false
+  }
+}, {
+  versionKey: false
+})
+
 const users = mongoose.model(process.env.COLLECTION_USER, userSchema)
 const files = mongoose.model(process.env.COLLECTION_FILE, fileSchema)
 const pages = mongoose.model(process.env.COLLECTION_PAGE, pageSchema)
 const products = mongoose.model(process.env.COLLECTION_PRODUCT, productSchema)
+const categorys = mongoose.model(process.env.COLLECTION_CATEGORY, categorySchema)
 const connection = mongoose.connection
 
 export default {
@@ -122,5 +139,6 @@ export default {
   files,
   pages,
   products,
+  categorys,
   connection
 }
