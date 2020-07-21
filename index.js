@@ -324,7 +324,6 @@ app.get('/pages/:condition', async (req, res) => {
       res.status(400)
       res.send({ success: false, message })
     } else {
-      console.log(error)
       // 伺服器錯誤
       res.status(500)
       res.send({ success: false, message: '伺服器錯誤' })
@@ -462,7 +461,6 @@ app.patch('/products/:item', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '商品更新成功', result })
   } catch (error) {
-    console.log(error)
     if (error.name === 'ValidationError') {
       // 資料格式錯誤
       const key = Object.keys(error.errors)[0]
@@ -689,8 +687,20 @@ app.get('/webdata', async (req, res) => {
       }
     }
 
+    result = await db.categorys.find()
+    let categorys = []
+    for (const value of result) {
+      if (value.show) {
+        categorys.push({
+          item: value.item,
+          name: value.name
+        })
+      }
+    }
+    categorys = categorys.sort(function (a, b) { return a.item > b.item ? 1 : -1 })
+
     res.status(200)
-    res.send({ success: true, message: '資料查詢成功', pages, products })
+    res.send({ success: true, message: '資料查詢成功', pages, products, categorys })
   } catch (error) {
     if (error.name === 'ValidationError') {
       // 資料格式錯誤
