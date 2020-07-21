@@ -475,6 +475,38 @@ app.patch('/products/:item', async (req, res) => {
   }
 })
 
+app.delete('/products/:item', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+
+  try {
+    const result = await db.products.findOneAndDelete(
+      {
+        item: req.params.item
+      }
+    )
+
+    res.status(200)
+    res.send({ success: true, message: '資料已移除', result })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
 // 上傳圖片
 app.post('/img/:item', async (req, res) => {
   // 沒有登入
