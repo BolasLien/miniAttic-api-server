@@ -126,11 +126,13 @@ app.post('/users', async (req, res) => {
 
   try {
     await db.users.create({
+      name: req.body.name,
+      phone: req.body.phone,
       account: req.body.account,
       password: md5(req.body.password)
     })
     res.status(200)
-    res.send({ success: true, message: '' })
+    res.send({ success: true, message: '會員註冊成功' })
   } catch (error) {
     // 資料格式錯誤
     if (error.name === 'validationError') {
@@ -165,7 +167,7 @@ app.post('/login', async (req, res) => {
     if (result.length > 0) {
       req.session.user = result[0].account
       res.status(200)
-      res.send({ success: true, message: '' })
+      res.send({ success: true, message: '會員登入成功', account: result[0].account, name: result[0].name })
     } else {
       res.status(404)
       res.send({ success: false, message: '帳號密碼錯誤' })
