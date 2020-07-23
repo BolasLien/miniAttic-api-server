@@ -161,11 +161,31 @@ const categorySchema = new Schema({
   versionKey: false
 })
 
+const cartSchema = new Schema({
+  products: {
+    // 商品資料
+    type: Array
+  },
+  product_count: {
+    // 有幾種商品
+    type: Number
+  },
+  total_price: {
+    // 所有商品的總計
+    type: Number
+  },
+  total_amount: {
+    // 有幾件商品
+    type: Number
+  }
+})
+
 const users = mongoose.model(process.env.COLLECTION_USER, userSchema)
 const files = mongoose.model(process.env.COLLECTION_FILE, fileSchema)
 const pages = mongoose.model(process.env.COLLECTION_PAGE, pageSchema)
 const products = mongoose.model(process.env.COLLECTION_PRODUCT, productSchema)
 const categorys = mongoose.model(process.env.COLLECTION_CATEGORY, categorySchema)
+const carts = mongoose.model(process.env.COLLECTION_CART, cartSchema)
 const connection = mongoose.connection
 
 export default {
@@ -174,5 +194,6 @@ export default {
   pages,
   products,
   categorys,
+  carts,
   connection
 }
