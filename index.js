@@ -765,12 +765,28 @@ app.post('/order', async (req, res) => {
     return
   }
 
+  let products = req.body.products
+  // 檢查是不是有效的訂單
+  if (products.length === 0) {
+    res.status(400)
+    res.send({ success: false, message: '訂單沒有商品' })
+    return
+  } else {
+    // 拿數量大於零的商品
+    products = req.body.products.filter(e => e.amount > 0)
+    if (products.length === 0) {
+      res.status(400)
+      res.send({ success: false, message: '訂單沒有商品' })
+      return
+    }
+  }
+
   try {
     await db.orders.create(
       {
         item: Date.now(),
         account: req.session.user,
-        products: req.body.products,
+        products: products,
         payment: req.body.payment,
         remark: req.body.remark
       }
@@ -805,12 +821,33 @@ app.get('/orders', async (req, res) => {
     const result = await db.orders.find({ account: req.session.user })
 
     const datas = []
+    const dbProducts = await db.products.find()
     for (const value of result) {
+      const item = value.item
+
+      // 找真正的商品資料
+      const products = []
+      for (const v of value.products) {
+        const product = dbProducts.find(e => e.item === v.item)
+        products.push({
+          item: product.item,
+          amount: v.amount,
+          name: product.name,
+          src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + product.img,
+          price: product.price
+        })
+      }
+
+      const payment = value.payment
+      const remark = value.remark
+      const status = value.status
+
       datas.push({
-        item: value.item,
-        products: value.products,
-        payment: value.payment,
-        remark: value.remark
+        item,
+        products,
+        payment,
+        remark,
+        status
       })
     }
 

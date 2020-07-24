@@ -189,6 +189,14 @@ const orderSchema = new Schema({
   remark: {
     type: String,
     maxlength: [200, '備註最多 200 個字']
+  },
+  status: {
+    type: Number,
+    // 0 訂單成立，尚未付款
+    // 1 訂單已付款，待出貨
+    // 2 出貨中
+    // 3 已送達
+    default: 0
   }
 })
 
