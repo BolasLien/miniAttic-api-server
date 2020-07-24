@@ -135,7 +135,7 @@ app.post('/users', async (req, res) => {
     res.send({ success: true, message: '會員註冊成功' })
   } catch (error) {
     // 資料格式錯誤
-    if (error.name === 'validationError') {
+    if (error.errors.account.properties.message === '電子信箱重複') {
       const key = Object.keys(error.errors)[0]
       const message = error.errors[key].message
       res.status(400)
@@ -735,6 +735,87 @@ app.get('/webdata', async (req, res) => {
 
     res.status(200)
     res.send({ success: true, message: '資料查詢成功', pages, products, categorys })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 新增訂單資料
+app.post('/order', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+  // 格式不符
+  if (!req.headers['content-type'].includes('application/json')) {
+    res.status(400)
+    res.send({ success: false, message: '格式不符' })
+    return
+  }
+
+  try {
+    await db.orders.create(
+      {
+        item: Date.now(),
+        account: req.session.user,
+        products: req.body.products,
+        payment: req.body.payment,
+        remark: req.body.remark
+      }
+    )
+    res.status(200)
+    res.send({ success: true, message: '訂單送出成功' })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 取得會員訂單
+app.get('/orders', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+
+  try {
+    const result = await db.orders.find({ account: req.session.user })
+
+    const datas = []
+    for (const value of result) {
+      datas.push({
+        item: value.item,
+        products: value.products,
+        payment: value.payment,
+        remark: value.remark
+      })
+    }
+
+    res.status(200)
+    res.send({ success: true, message: '資料查詢成功', datas })
   } catch (error) {
     if (error.name === 'ValidationError') {
       // 資料格式錯誤

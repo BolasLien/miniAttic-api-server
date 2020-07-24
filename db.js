@@ -49,10 +49,7 @@ const userSchema = new Schema({
     // 使用者權限
     type: Number,
     // 註冊的時候預設當作前台的會員
-    // 100 = 前台會員
-    // 200 = 後台管理員
-    // 999 = 兩邊都可以通
-    default: 100
+    default: process.env.ACCESS_RIGHT_USER
   }
 }, {
   versionKey: false
@@ -79,7 +76,7 @@ const pageSchema = new Schema({
   item: {
     // 例如: carousel-item-1 或 intro-title
     type: String,
-    required: [true, '沒有指定item']
+    required: [true, '沒有頁面編號']
   },
   img: {
     // 例如: /images/xxx.jpg 或 /miniattic/assets/img/xxx.jpg
@@ -111,7 +108,7 @@ const pageSchema = new Schema({
 const productSchema = new Schema({
   item: {
     type: String,
-    required: [true, '沒有商品item']
+    required: [true, '沒有商品編號']
   },
   class: {
     type: String
@@ -147,7 +144,7 @@ const productSchema = new Schema({
 const categorySchema = new Schema({
   item: {
     type: String,
-    required: [true, '沒有分類item']
+    required: [true, '沒有分類編號']
   },
   name: {
     type: String,
@@ -161,22 +158,37 @@ const categorySchema = new Schema({
   versionKey: false
 })
 
-const cartSchema = new Schema({
+const paymentSchema = new Schema({
+  // 付款方式
+  item: {
+    type: String,
+    required: [true, '沒有付款編號']
+  },
+  name: String,
+  price: Number
+})
+
+const orderSchema = new Schema({
+  // 訂單資料
+  item: {
+    type: String,
+    required: [true, '沒有訂單編號']
+  },
+  account: {
+    type: String,
+    required: [true, '沒有會員帳號']
+  },
   products: {
-    // 商品資料
-    type: Array
+    type: Object,
+    required: [true, '沒有商品']
   },
-  product_count: {
-    // 有幾種商品
-    type: Number
+  payment: {
+    type: Object,
+    required: [true, '沒有付款方式']
   },
-  total_price: {
-    // 所有商品的總計
-    type: Number
-  },
-  total_amount: {
-    // 有幾件商品
-    type: Number
+  remark: {
+    type: String,
+    maxlength: [200, '備註最多 200 個字']
   }
 })
 
@@ -185,7 +197,8 @@ const files = mongoose.model(process.env.COLLECTION_FILE, fileSchema)
 const pages = mongoose.model(process.env.COLLECTION_PAGE, pageSchema)
 const products = mongoose.model(process.env.COLLECTION_PRODUCT, productSchema)
 const categorys = mongoose.model(process.env.COLLECTION_CATEGORY, categorySchema)
-const carts = mongoose.model(process.env.COLLECTION_CART, cartSchema)
+const payments = mongoose.model(process.env.COLLECTION_PAYMENT, paymentSchema)
+const orders = mongoose.model(process.env.COLLECTION_ORDER, orderSchema)
 const connection = mongoose.connection
 
 export default {
@@ -194,6 +207,7 @@ export default {
   pages,
   products,
   categorys,
-  carts,
+  payments,
+  orders,
   connection
 }
