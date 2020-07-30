@@ -108,6 +108,7 @@ const pageSchema = new Schema({
 const productSchema = new Schema({
   item: {
     type: String,
+    unique: '編號重複',
     required: [true, '沒有商品編號']
   },
   class: {
@@ -144,6 +145,7 @@ const productSchema = new Schema({
 const categorySchema = new Schema({
   item: {
     type: String,
+    unique: '編號重複',
     required: [true, '沒有分類編號']
   },
   name: {
@@ -162,16 +164,25 @@ const paymentSchema = new Schema({
   // 付款方式
   item: {
     type: String,
+    unique: '編號重複',
     required: [true, '沒有付款編號']
   },
   name: String,
-  price: Number
+  price: Number,
+  description: {
+    type: String
+  },
+  show: {
+    type: Boolean,
+    default: false
+  }
 })
 
 const orderSchema = new Schema({
   // 訂單資料
   item: {
     type: String,
+    unique: '編號重複',
     required: [true, '沒有訂單編號']
   },
   account: {
