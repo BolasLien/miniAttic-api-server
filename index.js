@@ -684,6 +684,252 @@ app.post('/categorys', async (req, res) => {
   }
 })
 
+// 刪除商品分類
+app.delete('/categorys/:item', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+
+  try {
+    const result = await db.categorys.findOneAndDelete(
+      {
+        item: req.params.item
+      }
+    )
+
+    res.status(200)
+    res.send({ success: true, message: '資料已移除', result })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// ------------------------------------------------------------------
+// 拿付款方式
+app.get('/payments', async (req, res) => {
+  try {
+    const datas = await db.payments.find()
+
+    res.status(200)
+    res.send({ success: true, message: '資料查詢成功', datas })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 更新付款方式
+app.patch('/payments/:item', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+  // 格式不符
+  if (!req.headers['content-type'].includes('application/json')) {
+    res.status(400)
+    res.send({ success: false, message: '格式不符' })
+    return
+  }
+
+  try {
+    // 資料更新成功的時候要把資料進DB
+    await db.payments.findOneAndUpdate(
+      { item: req.params.item },
+      {
+        name: req.body.name,
+        price: req.body.price,
+        description: req.body.description,
+        show: req.body.show
+      }
+    )
+
+    res.status(200)
+    res.send({ success: true, message: '資料更新成功' })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 創建付款方式
+app.post('/payments', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+  // 格式不符
+  if (!req.headers['content-type'].includes('application/json')) {
+    res.status(400)
+    res.send({ success: false, message: '格式不符' })
+    return
+  }
+
+  try {
+    const result = await db.payments.create(
+      {
+        item: req.body.item,
+        name: req.body.name,
+        price: req.body.price,
+        description: req.body.description,
+        show: req.body.show
+      }
+    )
+
+    res.status(200)
+    res.send({ success: true, message: '資料建立成功', result })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 刪除付款方式
+app.delete('/payments/:item', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+
+  try {
+    const result = await db.payments.findOneAndDelete(
+      {
+        item: req.params.item
+      }
+    )
+
+    res.status(200)
+    res.send({ success: true, message: '資料已移除', result })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 取得所有會員訂單
+app.get('/back/orders', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+
+  try {
+    const result = await db.orders.find()
+
+    const datas = []
+    const dbProducts = await db.products.find()
+    for (const value of result) {
+      const item = value.item
+
+      // 計算訂單金額
+      let orderPrice = 0
+
+      // 找真正的商品資料
+      const products = []
+      for (const v of value.products) {
+        const product = dbProducts.find(e => e.item === v.item)
+        products.push({
+          item: product.item,
+          amount: v.amount,
+          name: product.name,
+          src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + product.img,
+          price: product.price
+        })
+
+        orderPrice += product.price * v.amount
+      }
+
+      const payment = value.payment
+      orderPrice += value.payment.price
+
+      const remark = value.remark
+      const status = value.status
+
+      datas.push({
+        item,
+        products,
+        payment,
+        orderPrice,
+        remark,
+        status
+      })
+    }
+
+    res.status(200)
+    res.send({ success: true, message: '資料查詢成功', datas })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// ------------------------------------------------------------------
+
 // 前台拿網頁資料
 app.get('/webdata', async (req, res) => {
   try {
@@ -721,6 +967,7 @@ app.get('/webdata', async (req, res) => {
       }
     }
 
+    // 拿商品分類
     result = await db.categorys.find()
     let categorys = []
     for (const value of result) {
@@ -733,8 +980,22 @@ app.get('/webdata', async (req, res) => {
     }
     categorys = categorys.sort(function (a, b) { return a.item > b.item ? 1 : -1 })
 
+    // 拿付款方式
+    result = await db.payments.find()
+    const payments = []
+    for (const value of result) {
+      if (value.show) {
+        payments.push({
+          item: value.item,
+          name: value.name,
+          description: value.description,
+          price: value.price
+        })
+      }
+    }
+
     res.status(200)
-    res.send({ success: true, message: '資料查詢成功', pages, products, categorys })
+    res.send({ success: true, message: '資料查詢成功', pages, products, categorys, payments })
   } catch (error) {
     if (error.name === 'ValidationError') {
       // 資料格式錯誤
