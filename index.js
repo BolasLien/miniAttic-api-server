@@ -988,6 +988,7 @@ app.get('/webdata', async (req, res) => {
         payments.push({
           item: value.item,
           name: value.name,
+          description: value.description,
           price: value.price
         })
       }
