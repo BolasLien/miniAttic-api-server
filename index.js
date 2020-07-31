@@ -876,6 +876,7 @@ app.get('/back/orders', async (req, res) => {
     const dbProducts = await db.products.find()
     for (const value of result) {
       const item = value.item
+      const account = value.account
 
       // 計算訂單金額
       let orderPrice = 0
@@ -903,6 +904,7 @@ app.get('/back/orders', async (req, res) => {
 
       datas.push({
         item,
+        account,
         products,
         payment,
         orderPrice,
@@ -913,6 +915,84 @@ app.get('/back/orders', async (req, res) => {
 
     res.status(200)
     res.send({ success: true, message: '資料查詢成功', datas })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 更新訂單
+app.patch('/back/orders/:item', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+  // 格式不符
+  if (!req.headers['content-type'].includes('application/json')) {
+    res.status(400)
+    res.send({ success: false, message: '格式不符' })
+    return
+  }
+
+  try {
+    const result = await db.orders.findOneAndUpdate(
+      {
+        item: req.params.item
+      },
+      req.body
+    )
+
+    res.status(200)
+    res.send({ success: true, message: '商品更新成功', result })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+app.delete('/back/orders/:item', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+
+  try {
+    console.log(req.params.item)
+    const result = await db.orders.findOneAndDelete(
+      {
+        item: req.params.item
+      }
+    )
+
+    if (result) {
+      res.status(200)
+      res.send({ success: true, message: '資料已移除', result })
+    } else {
+      res.status(404)
+      res.send({ success: false, message: '沒有這個東西' })
+    }
   } catch (error) {
     if (error.name === 'ValidationError') {
       // 資料格式錯誤
@@ -1080,6 +1160,66 @@ app.get('/orders', async (req, res) => {
 
   try {
     const result = await db.orders.find({ account: req.session.user })
+
+    const datas = []
+    const dbProducts = await db.products.find()
+    for (const value of result) {
+      const item = value.item
+
+      // 找真正的商品資料
+      const products = []
+      for (const v of value.products) {
+        const product = dbProducts.find(e => e.item === v.item)
+        products.push({
+          item: product.item,
+          amount: v.amount,
+          name: product.name,
+          src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + product.img,
+          price: product.price
+        })
+      }
+
+      const payment = value.payment
+      const remark = value.remark
+      const status = value.status
+
+      datas.push({
+        item,
+        products,
+        payment,
+        remark,
+        status
+      })
+    }
+
+    res.status(200)
+    res.send({ success: true, message: '資料查詢成功', datas })
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
+// 取得會員訂單
+app.get('/orderDetail/:item', async (req, res) => {
+  // 沒有登入
+  if (req.session.user === undefined) {
+    res.status(401)
+    res.send({ success: false, message: '未登入' })
+    return
+  }
+
+  try {
+    const result = await db.orders.find({ account: req.session.user, item: req.params.item })
 
     const datas = []
     const dbProducts = await db.products.find()
