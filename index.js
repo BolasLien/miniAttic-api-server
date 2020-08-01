@@ -116,6 +116,11 @@ app.listen(process.env.PORT, () => {
   console.log('伺服器已啟動')
 })
 
+app.get('/redirect', (req, res) => {
+  res.redirect(req.headers.referer)
+  // console.log('redirect to', req.headers.referer)
+})
+
 // 註冊新用戶
 app.post('/users', async (req, res) => {
   if (!req.headers['content-type'].includes('application/json')) {
