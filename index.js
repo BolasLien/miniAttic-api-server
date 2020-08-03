@@ -62,7 +62,7 @@ app.use(session({
     maxAge: 1000 * 60 * 30,
     domain: 'miniattic.herokuapp.com',
     sameSite: 'none',
-    secure: 'auto'
+    secure: process.env.ALLOW_CORS
   },
   resave: true,
   // 是否保存未修改的session
