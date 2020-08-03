@@ -60,9 +60,7 @@ app.use(session({
     // 1000 毫秒 = 一秒鐘
     // 1000 毫秒 * 60 = 一分鐘
     // 1000 毫秒 * 60 * 30 = 三十分鐘
-    maxAge: 1000 * 60 * 30,
-    sameSite: 'none',
-    secure: true
+    maxAge: 1000 * 60 * 30
   },
   resave: true,
   // 是否保存未修改的session
@@ -128,7 +126,7 @@ app.get('/', function (req, res) {
   // 否则，设置 cookie 字段 isVisit, 并设置过期时间为1分钟
   if (req.cookies.isVisit) {
     console.log(req.cookies)
-    res.send('再次欢迎访问')
+    res.send({ success: true })
   } else {
     res.cookie('isVisit', 1, { maxAge: 60 * 1000 })
     res.redirect(req.headers.referer)
@@ -184,12 +182,11 @@ app.post('/login', async (req, res) => {
     )
 
     if (result.length > 0) {
-      // if (process.env.ALLOW_CORS) {
-      // req.session.user = result[0].account
-      // } else {
-      res.cookie('user', result[0].account)
-      // }
-
+      if (process.env.ALLOW_CORS) {
+        req.session.user = result[0].account
+      } else {
+        res.cookie('user', result[0].account, { maxAge: 1000 * 60 * 30, sameSite: 'none', secure: true })
+      }
       res.status(200)
       res.send({ success: true, message: '會員登入成功', account: result[0].account, name: result[0].name })
     } else {
