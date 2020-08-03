@@ -185,7 +185,7 @@ app.post('/login', async (req, res) => {
       if (process.env.ALLOW_CORS) {
         req.session.user = result[0].account
       } else {
-        req.cookies.user = result[0].account
+        res.cookie('user', result[0].account, { maxAge: 60 * 1000 })
       }
 
       res.status(200)
@@ -225,6 +225,10 @@ app.delete('/logout', async (req, res) => {
 app.get('/heartbeat', async (req, res) => {
   let isLogin = false
   if (req.session.user !== undefined) {
+    isLogin = true
+  }
+
+  if (req.cookies.user !== undefined) {
     isLogin = true
   }
   res.status(200)
