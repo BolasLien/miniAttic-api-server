@@ -59,8 +59,7 @@ app.use(session({
     // 1000 毫秒 = 一秒鐘
     // 1000 毫秒 * 60 = 一分鐘
     // 1000 毫秒 * 60 * 30 = 三十分鐘
-    maxAge: 1000 * 60 * 30,
-    domain: 'bolaslien.github.io'
+    maxAge: 1000 * 60 * 30
   },
   resave: true,
   // 是否保存未修改的session
@@ -157,7 +156,6 @@ app.post('/users', async (req, res) => {
 
 // 登入驗證
 app.post('/login', async (req, res) => {
-  console.log(req)
   if (!req.headers['content-type'].includes('application/json')) {
     res.status(400)
     res.send({ success: false, message: '格式不符' })
@@ -174,8 +172,6 @@ app.post('/login', async (req, res) => {
 
     if (result.length > 0) {
       req.session.user = result[0].account
-      console.log(res)
-      console.log(result)
       res.status(200)
       res.send({ success: true, message: '會員登入成功', account: result[0].account, name: result[0].name })
     } else {
@@ -211,12 +207,10 @@ app.delete('/logout', async (req, res) => {
 })
 
 app.get('/heartbeat', async (req, res) => {
-  // console.log(req.session)
   let isLogin = false
   if (req.session.user !== undefined) {
     isLogin = true
   }
-  // console.log(res
   res.status(200)
   res.send(isLogin)
 })
@@ -990,7 +984,6 @@ app.delete('/back/orders/:item', async (req, res) => {
   }
 
   try {
-    console.log(req.params.item)
     const result = await db.orders.findOneAndDelete(
       {
         item: req.params.item
