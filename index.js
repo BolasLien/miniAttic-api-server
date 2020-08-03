@@ -8,6 +8,7 @@ import md5 from 'md5'
 import dotenv from 'dotenv'
 import path from 'path'
 import FTPStorage from 'multer-ftp'
+import cookieParser from 'cookie-parser'
 // import fs from 'fs'
 // import fsx from 'fs-extra'
 
@@ -59,10 +60,7 @@ app.use(session({
     // 1000 毫秒 = 一秒鐘
     // 1000 毫秒 * 60 = 一分鐘
     // 1000 毫秒 * 60 * 30 = 三十分鐘
-    maxAge: 1000 * 60 * 30,
-    domain: 'miniattic.herokuapp.com',
-    sameSite: 'none',
-    secure: process.env.ALLOW_CORS
+    maxAge: 1000 * 60 * 30
   },
   resave: true,
   // 是否保存未修改的session
@@ -120,8 +118,23 @@ app.listen(process.env.PORT, () => {
   console.log('伺服器已啟動')
 })
 
+// Cookie設定
+app.use(cookieParser())
+
+app.get('/', function (req, res) {
+  // 如果请求中的 cookie 存在 isVisit, 则输出 cookie
+  // 否则，设置 cookie 字段 isVisit, 并设置过期时间为1分钟
+  if (req.cookies.isVisit) {
+    console.log(req.cookies)
+    res.send('再次欢迎访问')
+  } else {
+    res.cookie('isVisit', 1, { maxAge: 60 * 1000 })
+    res.redirect(req.headers.referer)
+  }
+})
+
 app.get('/redirect', (req, res) => {
-  res.redirect(req.headers.referer)
+
   // console.log('redirect to', req.headers.referer)
 })
 
