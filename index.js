@@ -24,6 +24,7 @@ app.use(bodyParser.json())
 // 跨域請求設定
 app.use(cors({
   origin (origin, callback) {
+    // console.log(origin)
     // 直接開網頁，不是 ajax 時，origin 是 undefined
     if (origin === undefined) {
       callback(null, true)
@@ -172,6 +173,8 @@ app.post('/login', async (req, res) => {
 
     if (result.length > 0) {
       req.session.user = result[0].account
+      console.log(res)
+      console.log(result)
       res.status(200)
       res.send({ success: true, message: '會員登入成功', account: result[0].account, name: result[0].name })
     } else {
@@ -207,12 +210,12 @@ app.delete('/logout', async (req, res) => {
 })
 
 app.get('/heartbeat', async (req, res) => {
-  console.log(req.session)
+  // console.log(req.session)
   let isLogin = false
   if (req.session.user !== undefined) {
     isLogin = true
   }
-
+  // console.log(res
   res.status(200)
   res.send(isLogin)
 })
