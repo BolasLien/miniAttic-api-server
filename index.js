@@ -155,6 +155,7 @@ app.post('/users', async (req, res) => {
 
 // 登入驗證
 app.post('/login', async (req, res) => {
+  console.log(req)
   if (!req.headers['content-type'].includes('application/json')) {
     res.status(400)
     res.send({ success: false, message: '格式不符' })
