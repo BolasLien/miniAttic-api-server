@@ -60,7 +60,7 @@ app.use(session({
     // 1000 毫秒 * 60 = 一分鐘
     // 1000 毫秒 * 60 * 30 = 三十分鐘
     maxAge: 1000 * 60 * 30,
-    domain: process.env.ALLOW_CORS ? 'localhost' : 'bolaslien.github.io',
+    domain: 'bolaslien.github.io',
     sameSite: 'none',
     secure: 'auto'
   },
