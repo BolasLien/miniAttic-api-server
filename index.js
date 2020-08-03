@@ -184,11 +184,11 @@ app.post('/login', async (req, res) => {
     )
 
     if (result.length > 0) {
-      if (process.env.ALLOW_CORS) {
-        req.session.user = result[0].account
-      } else {
-        res.cookie('user', result[0].account, { maxAge: 60 * 1000 })
-      }
+      // if (process.env.ALLOW_CORS) {
+      //   req.session.user = result[0].account
+      // } else {
+      res.cookie('user', result[0].account, { maxAge: 60 * 1000, sameSite: 'none', secure: true })
+      // }
 
       res.status(200)
       res.send({ success: true, message: '會員登入成功', account: result[0].account, name: result[0].name })
