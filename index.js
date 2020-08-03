@@ -206,6 +206,7 @@ app.delete('/logout', async (req, res) => {
 })
 
 app.get('/heartbeat', async (req, res) => {
+  console.log(req)
   let isLogin = false
   if (req.session.user !== undefined) {
     isLogin = true
