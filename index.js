@@ -182,7 +182,7 @@ app.post('/login', async (req, res) => {
     )
 
     if (result.length > 0) {
-      if (process.env.ALLOW_CORS) {
+      if (process.env.ALLOW_CORS === 'true') {
         req.session.user = result[0].account
       } else {
         res.cookie('user', result[0].account, { maxAge: 1000 * 60 * 30, sameSite: 'none', secure: true })
