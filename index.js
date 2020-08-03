@@ -61,8 +61,8 @@ app.use(session({
     // 1000 毫秒 * 60 = 一分鐘
     // 1000 毫秒 * 60 * 30 = 三十分鐘
     maxAge: 1000 * 60 * 30,
-    sameSite: 'none',
-    secure: true
+    sameSite: false,
+    secure: 'auto'
   },
   resave: true,
   // 是否保存未修改的session
