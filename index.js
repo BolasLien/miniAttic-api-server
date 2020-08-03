@@ -31,13 +31,13 @@ app.use(cors({
       callback(null, true)
     } else {
       if (process.env.ALLOW_CORS === 'true') {
-      // 開發環境，允許
+        // 開發環境，允許
         callback(null, true)
       } else if (origin.includes('github')) {
-      // 非開發環境，但是從 github 過來，允許
+        // 非開發環境，但是從 github 過來，允許
         callback(null, true)
       } else {
-      // 不是開發也不是從 github 過來，拒絕
+        // 不是開發也不是從 github 過來，拒絕
         callback(new Error('not allowed'), false)
       }
     }
@@ -133,11 +133,6 @@ app.get('/', function (req, res) {
   }
 })
 
-app.get('/redirect', (req, res) => {
-
-  // console.log('redirect to', req.headers.referer)
-})
-
 // 註冊新用戶
 app.post('/users', async (req, res) => {
   if (!req.headers['content-type'].includes('application/json')) {
@@ -187,7 +182,12 @@ app.post('/login', async (req, res) => {
     )
 
     if (result.length > 0) {
-      req.session.user = result[0].account
+      if (process.env.ALLOW_CORS) {
+        req.session.user = result[0].account
+      } else {
+        req.cookies.user = result[0].account
+      }
+
       res.status(200)
       res.send({ success: true, message: '會員登入成功', account: result[0].account, name: result[0].name })
     } else {
