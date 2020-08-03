@@ -1174,11 +1174,20 @@ app.post('/order', async (req, res) => {
 
 // 取得會員訂單
 app.get('/orders', async (req, res) => {
+  if (process.env.ALLOW_CORS === 'true') {
   // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
+    if (req.session.user === undefined) {
+      res.status(401)
+      res.send({ success: false, message: '未登入' })
+      return
+    }
+  } else {
+  // 沒有登入
+    if (req.cookies.user === undefined) {
+      res.status(401)
+      res.send({ success: false, message: '未登入' })
+      return
+    }
   }
 
   try {
