@@ -8,7 +8,7 @@ import md5 from 'md5'
 import dotenv from 'dotenv'
 import path from 'path'
 import FTPStorage from 'multer-ftp'
-// import cookieParser from 'cookie-parser'
+import cookieParser from 'cookie-parser'
 // import fs from 'fs'
 // import fsx from 'fs-extra'
 
@@ -119,11 +119,10 @@ app.listen(process.env.PORT, () => {
 })
 
 // Cookie設定
-// app.use(cookieParser())
+app.use(cookieParser())
 
+// 自動導向
 app.get('/', function (req, res) {
-  // 如果请求中的 cookie 存在 isVisit, 则输出 cookie
-  // 否则，设置 cookie 字段 isVisit, 并设置过期时间为1分钟
   if (req.cookies.isVisit) {
     console.log(req.cookies)
     res.send({ success: true })
