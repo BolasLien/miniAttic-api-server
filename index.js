@@ -190,6 +190,7 @@ app.post('/login', async (req, res) => {
         // res.cookie('user', result[0].account, { maxAge: 1000 * 60 * 30, sameSite: 'none', secure: true })
       }
 
+      console.log(req.session)
       res.status(200)
       res.send({ success: true, message: '會員登入成功', account: result[0].account, name: result[0].name })
     } else {
