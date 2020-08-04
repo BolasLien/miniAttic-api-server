@@ -8,9 +8,6 @@ import md5 from 'md5'
 import dotenv from 'dotenv'
 import path from 'path'
 import FTPStorage from 'multer-ftp'
-import cookieParser from 'cookie-parser'
-// import fs from 'fs'
-// import fsx from 'fs-extra'
 
 import db from './db.js'
 
@@ -47,7 +44,7 @@ app.use(cors({
 
 // Session設定
 app.use(session({
-  secret: 'miniAttic',
+  secret: 'miniattic',
   // 將 session 存入 mongodb
   store: new MongoStore({
     // 使用 mongoose 的資料庫連接
@@ -61,6 +58,8 @@ app.use(session({
     // 1000 毫秒 * 60 = 一分鐘
     // 1000 毫秒 * 60 * 30 = 三十分鐘
     maxAge: 1000 * 60 * 30
+    // secure: true,
+    // sameSite: 'none'
   },
   resave: true,
   // 是否保存未修改的session
@@ -117,9 +116,6 @@ app.listen(process.env.PORT, () => {
   console.log(`Listening on: http://localhost:${process.env.PORT}`)
   console.log('伺服器已啟動')
 })
-
-// Cookie設定
-app.use(cookieParser())
 
 // 自動導向
 // app.get('/', function (req, res) {
@@ -181,16 +177,7 @@ app.post('/login', async (req, res) => {
     )
 
     if (result.length > 0) {
-      if (process.env.ALLOW_CORS === 'true') {
-        req.session.user = result[0].account
-      } else {
-        req.session.cookie.sameSite = 'none'
-        req.session.cookie.secure = true
-        req.session.user = result[0].account
-        // res.cookie('user', result[0].account, { maxAge: 1000 * 60 * 30, sameSite: 'none', secure: true })
-      }
-
-      console.log(req.session)
+      req.session.user = result[0].account
       res.status(200)
       res.send({ success: true, message: '會員登入成功', account: result[0].account, name: result[0].name })
     } else {
@@ -218,7 +205,7 @@ app.delete('/logout', async (req, res) => {
       res.status(500)
       res.send({ success: false, message: '伺服器錯誤' })
     } else {
-      res.clearCookie('connect.sid')
+      res.clearCookie()
       res.status(200)
       res.send({ success: true, message: '' })
     }
@@ -228,10 +215,6 @@ app.delete('/logout', async (req, res) => {
 app.get('/heartbeat', async (req, res) => {
   let isLogin = false
   if (req.session.user !== undefined) {
-    isLogin = true
-  }
-
-  if (req.cookies.user !== undefined) {
     isLogin = true
   }
   res.status(200)
