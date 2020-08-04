@@ -122,15 +122,15 @@ app.listen(process.env.PORT, () => {
 app.use(cookieParser())
 
 // 自動導向
-app.get('/', function (req, res) {
-  if (req.cookies.isVisit) {
-    console.log(req.cookies)
-    res.send({ success: true })
-  } else {
-    res.cookie('isVisit', 1, { maxAge: 60 * 1000 })
-    res.redirect(req.headers.referer)
-  }
-})
+// app.get('/', function (req, res) {
+//   if (req.cookies.isVisit) {
+//     console.log(req.cookies)
+//     res.send({ success: true })
+//   } else {
+//     res.cookie('isVisit', 1, { maxAge: 60 * 1000 })
+//     res.redirect(req.headers.referer)
+//   }
+// })
 
 // 註冊新用戶
 app.post('/users', async (req, res) => {
@@ -184,8 +184,12 @@ app.post('/login', async (req, res) => {
       if (process.env.ALLOW_CORS === 'true') {
         req.session.user = result[0].account
       } else {
-        res.cookie('user', result[0].account, { maxAge: 1000 * 60 * 30, sameSite: 'none', secure: true })
+        req.session.cookie.sameSite = 'none'
+        req.session.cookie.secure = true
+        req.session.user = result[0].account
+        // res.cookie('user', result[0].account, { maxAge: 1000 * 60 * 30, sameSite: 'none', secure: true })
       }
+
       res.status(200)
       res.send({ success: true, message: '會員登入成功', account: result[0].account, name: result[0].name })
     } else {
@@ -213,7 +217,7 @@ app.delete('/logout', async (req, res) => {
       res.status(500)
       res.send({ success: false, message: '伺服器錯誤' })
     } else {
-      res.clearCookie()
+      res.clearCookie('connect.sid')
       res.status(200)
       res.send({ success: true, message: '' })
     }
