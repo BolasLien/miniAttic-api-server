@@ -8,7 +8,8 @@ import md5 from 'md5'
 import dotenv from 'dotenv'
 import path from 'path'
 import FTPStorage from 'multer-ftp'
-import rp from 'request-promise'
+// import rp from 'request-promise'
+import axios from 'axios'
 
 import db from './db.js'
 
@@ -349,20 +350,15 @@ app.get('/pages/:condition', async (req, res) => {
 app.get('/image/:item', async (req, res) => {
   try {
     const uri = 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + '/' + process.env.FTP_FILE_PATH + req.params.item
-    const data = await rp(
-      {
-        uri,
-        method: 'GET',
-        encoding: null
-      }
-    )
+    const response = await axios.get(uri, { responseType: 'arraybuffer' })
     let ext = path.extname(uri).replace('.', '')
     ext = ext === 'jpg' ? 'jpeg' : ext
     res.set({
       'Content-Type': 'image/' + ext
     })
-    res.send(data)
+    res.send(response.data)
   } catch (error) {
+    console.log(error)
     res.status(500)
     res.send({ success: false, message: '伺服器錯誤' })
   }
