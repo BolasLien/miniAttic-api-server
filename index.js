@@ -346,17 +346,28 @@ app.get('/pages/:condition', async (req, res) => {
   }
 })
 
+const imageCache = []
+
 // 拿圖片api
 app.get('/image/:item', async (req, res) => {
   try {
-    const uri = 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + '/' + process.env.FTP_FILE_PATH + req.params.item
-    const response = await axios.get(uri, { responseType: 'arraybuffer' })
-    let ext = path.extname(uri).replace('.', '')
-    ext = ext === 'jpg' ? 'jpeg' : ext
-    res.set({
-      'Content-Type': 'image/' + ext
-    })
-    res.send(response.data)
+    if (imageCache.find(e => e.item === req.params.item)) {
+      const data = imageCache.find(e => e.item === req.params.item)
+      res.set({
+        'Content-Type': 'image/' + data.ext
+      })
+      res.send(data.image)
+    } else {
+      const uri = 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + '/' + process.env.FTP_FILE_PATH + req.params.item
+      const response = await axios.get(uri, { responseType: 'arraybuffer' })
+      let ext = path.extname(uri).replace('.', '')
+      ext = ext === 'jpg' ? 'jpeg' : ext
+      res.set({
+        'Content-Type': 'image/' + ext
+      })
+      res.send(response.data)
+      imageCache.push({ item: req.params.item, image: response.data, ext: ext })
+    }
   } catch (error) {
     console.log(error)
     res.status(500)
