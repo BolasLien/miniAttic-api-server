@@ -8,6 +8,7 @@ import md5 from 'md5'
 import dotenv from 'dotenv'
 import path from 'path'
 import FTPStorage from 'multer-ftp'
+import rp from 'request-promise'
 
 import db from './db.js'
 
@@ -276,7 +277,7 @@ app.get('/pages', async (req, res) => {
     for (const value of result) {
       datas.push({
         item: value.item,
-        src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.img,
+        src: value.img,
         description1: value.description1,
         description2: value.description2,
         description3: value.description3,
@@ -316,7 +317,7 @@ app.get('/pages/:condition', async (req, res) => {
     for (const value of result) {
       datas.push({
         item: value.item,
-        src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.img,
+        src: value.img,
         description1: value.description1,
         description2: value.description2,
         description3: value.description3,
@@ -344,17 +345,27 @@ app.get('/pages/:condition', async (req, res) => {
   }
 })
 
-// pages的圖片api
-app.get('/img/:item', async (req, res) => {
-  const result = await db.pages.findOne({ item: req.params.item })
-
-  if (result === null) {
-    // 如果資料庫沒有資料
-    res.status(404)
-    res.send({ success: false, message: '找不到圖片' })
-    return
+// 拿圖片api
+app.get('/image/:item', async (req, res) => {
+  try {
+    const uri = 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + '/' + process.env.FTP_FILE_PATH + req.params.item
+    const data = await rp(
+      {
+        uri,
+        method: 'GET',
+        encoding: null
+      }
+    )
+    let ext = path.extname(uri).replace('.', '')
+    ext = ext === 'jpg' ? 'jpeg' : ext
+    res.set({
+      'Content-Type': 'image/' + ext
+    })
+    res.send(data)
+  } catch (error) {
+    res.status(500)
+    res.send({ success: false, message: '伺服器錯誤' })
   }
-  res.redirect('http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + result.img)
 })
 
 // 新增商品
@@ -412,7 +423,7 @@ app.get('/products', async (req, res) => {
     for (const value of result) {
       datas.push({
         item: value.item,
-        src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.img,
+        src: value.img,
         class: value.class,
         name: value.name,
         show: value.show,
@@ -900,7 +911,7 @@ app.get('/back/orders', async (req, res) => {
           item: product.item,
           amount: v.amount,
           name: product.name,
-          src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + product.img,
+          src: product.img,
           price: product.price
         })
 
@@ -1030,7 +1041,7 @@ app.get('/webdata', async (req, res) => {
       if (value.show) {
         pages.push({
           item: value.item,
-          src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.img,
+          src: value.img,
           description1: value.description1,
           description2: value.description2,
           description3: value.description3,
@@ -1046,7 +1057,7 @@ app.get('/webdata', async (req, res) => {
       if (value.show) {
         products.push({
           item: value.item,
-          src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + value.img,
+          src: value.img,
           class: value.class,
           name: value.name,
           subheading: value.subheading,
@@ -1193,7 +1204,7 @@ app.get('/orders', async (req, res) => {
           item: product.item,
           amount: v.amount,
           name: product.name,
-          src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + product.img,
+          src: product.img,
           price: product.price
         })
       }
@@ -1253,7 +1264,7 @@ app.get('/orderDetail/:item', async (req, res) => {
           item: product.item,
           amount: v.amount,
           name: product.name,
-          src: 'http://' + process.env.FTP_HOST + '/' + process.env.FTP_USER + product.img,
+          src: product.img,
           price: product.price
         })
       }
