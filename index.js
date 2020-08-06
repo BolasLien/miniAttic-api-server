@@ -628,12 +628,12 @@ app.post('/img/:item', async (req, res) => {
         if (req.body.collection === 'product') {
           await db.products.findOneAndUpdate(
             { item: req.params.item },
-            { img: process.env.FTP_FILE_PATH + name }
+            { img: name }
           )
         } else if (req.body.collection === 'page') {
           await db.pages.findOneAndUpdate(
             { item: req.params.item },
-            { img: process.env.FTP_FILE_PATH + name }
+            { img: name }
           )
         }
 
