@@ -201,6 +201,54 @@ app.post('/login', async (req, res) => {
   }
 })
 
+// 管理者登入驗證
+app.post('/back/login', async (req, res) => {
+  if (!req.headers['content-type'].includes('application/json')) {
+    res.status(400)
+    res.send({ success: false, message: '格式不符' })
+    return
+  }
+
+  try {
+    const result = await db.users.find(
+      {
+        account: req.body.account,
+        password: md5(req.body.password)
+      }
+    )
+
+    if (result.length > 0) {
+      if (result[0].access_right === parseInt(process.env.ACCESS_RIGHT_ADMINISTRATOR)) {
+        req.session.user = result[0].account
+        res.status(200)
+        res.send({ success: true, message: '登入成功', user: result[0].account, access_right: 'admin' })
+      } else if (result[0].access_right === parseInt(process.env.ACCESS_RIGHT_EDITOR)) {
+        req.session.user = result[0].account
+        res.status(200)
+        res.send({ success: true, message: '登入成功', user: result[0].account, access_right: 'edtor' })
+      } else {
+        res.status(403)
+        res.send({ success: false, message: '沒有權限' })
+      }
+    } else {
+      res.status(404)
+      res.send({ success: false, message: '帳號密碼錯誤' })
+    }
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      // 資料格式錯誤
+      const key = Object.keys(error.errors)[0]
+      const message = error.errors[key].message
+      res.status(400)
+      res.send({ success: false, message })
+    } else {
+      // 伺服器錯誤
+      res.status(500)
+      res.send({ success: false, message: '伺服器錯誤' })
+    }
+  }
+})
+
 app.delete('/logout', async (req, res) => {
   req.session.destroy(error => {
     if (error) {
@@ -1035,8 +1083,6 @@ app.delete('/back/orders/:item', async (req, res) => {
     }
   }
 })
-
-// ------------------------------------------------------------------
 
 // 前台拿網頁資料
 app.get('/webdata', async (req, res) => {
