@@ -117,7 +117,7 @@ const productSchema = new Schema({
   img: {
     // 例如: /images/xxx.jpg 或 /miniattic/assets/img/xxx.jpg
     type: String,
-    default: '/1594090312145.jpg'
+    default: '1594090312145.jpg'
   },
   name: {
     type: String

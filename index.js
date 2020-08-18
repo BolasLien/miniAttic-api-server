@@ -8,7 +8,7 @@ import md5 from 'md5'
 import dotenv from 'dotenv'
 import path from 'path'
 import FTPStorage from 'multer-ftp'
-// import rp from 'request-promise'
+import jwt from 'jsonwebtoken'
 import axios from 'axios'
 
 import db from './db.js'
@@ -179,9 +179,15 @@ app.post('/login', async (req, res) => {
     )
 
     if (result.length > 0) {
-      req.session.user = result[0].account
+      // 登入成功簽token回去
+      const token = jwt.sign({
+        account: result[0].account,
+        access: result[0].access_right,
+        exp: Math.floor(Date.now() / 1000) + 60 * 30
+      }, process.env.JWT_KEY)
+
       res.status(200)
-      res.send({ success: true, message: '會員登入成功', account: result[0].account, name: result[0].name })
+      res.send({ success: true, message: '會員登入成功', account: result[0].account, name: result[0].name, token })
     } else {
       res.status(404)
       res.send({ success: false, message: '帳號密碼錯誤' })
@@ -218,18 +224,27 @@ app.post('/back/login', async (req, res) => {
     )
 
     if (result.length > 0) {
+      // 登入成功簽token回去
+      const token = jwt.sign({
+        account: result[0].account,
+        access: result[0].access_right,
+        exp: Math.floor(Date.now() / 1000) + 60 * 30
+      }, process.env.JWT_KEY)
+
+      let access = ''
+
       if (result[0].access_right === parseInt(process.env.ACCESS_RIGHT_ADMINISTRATOR)) {
-        req.session.user = result[0].account
-        res.status(200)
-        res.send({ success: true, message: '登入成功', user: result[0].account, access_right: 'admin' })
+        access = 'admin'
       } else if (result[0].access_right === parseInt(process.env.ACCESS_RIGHT_EDITOR)) {
-        req.session.user = result[0].account
-        res.status(200)
-        res.send({ success: true, message: '登入成功', user: result[0].account, access_right: 'edtor' })
+        access = 'edtor'
       } else {
         res.status(403)
         res.send({ success: false, message: '沒有權限' })
+        return
       }
+
+      res.status(200)
+      res.send({ success: true, message: '登入成功', user: result[0].account, access, token })
     } else {
       res.status(404)
       res.send({ success: false, message: '帳號密碼錯誤' })
@@ -264,21 +279,39 @@ app.delete('/logout', async (req, res) => {
 
 app.get('/heartbeat', async (req, res) => {
   let isLogin = false
-  if (req.session.user !== undefined) {
-    isLogin = true
+  const { authorization } = req.headers
+  if (!authorization) {
+    res.status(403)
+    res.send('Error')
+    return
   }
-  res.status(200)
-  res.send(isLogin)
+
+  try {
+    const [, token] = authorization.split(' ')
+    const JWTData = jwt.verify(token, process.env.JWT_KEY)
+    if (JWTData) {
+      isLogin = true
+    }
+
+    res.status(200)
+    res.send(isLogin)
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
+    } else {
+      res.status(500)
+      res.send('Error')
+    }
+  }
 })
 
 // 內容編輯更新
 app.patch('/pages/:item', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
   // 格式不符
   if (!req.headers['content-type'].includes('application/json')) {
     res.status(400)
@@ -287,6 +320,10 @@ app.patch('/pages/:item', async (req, res) => {
   }
 
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    jwt.verify(token, process.env.JWT_KEY)
+
     // 資料更新成功的時候要把資料進DB
     await db.pages.findOneAndUpdate(
       {
@@ -309,6 +346,13 @@ app.patch('/pages/:item', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -425,12 +469,6 @@ app.get('/image/:item', async (req, res) => {
 
 // 新增商品
 app.post('/products', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
   // 格式不符
   if (!req.headers['content-type'].includes('application/json')) {
     res.status(400)
@@ -439,6 +477,10 @@ app.post('/products', async (req, res) => {
   }
 
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    jwt.verify(token, process.env.JWT_KEY)
+
     const result = await db.products.create(
       {
         item: Date.now(),
@@ -461,6 +503,13 @@ app.post('/products', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -508,12 +557,6 @@ app.get('/products', async (req, res) => {
 
 // 更新商品
 app.patch('/products/:item', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
   // 格式不符
   if (!req.headers['content-type'].includes('application/json')) {
     res.status(400)
@@ -522,6 +565,9 @@ app.patch('/products/:item', async (req, res) => {
   }
 
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    jwt.verify(token, process.env.JWT_KEY)
     const result = await db.products.findOneAndUpdate(
       {
         item: req.params.item
@@ -546,6 +592,13 @@ app.patch('/products/:item', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -555,14 +608,10 @@ app.patch('/products/:item', async (req, res) => {
 })
 
 app.delete('/products/:item', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
-
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    jwt.verify(token, process.env.JWT_KEY)
     const result = await db.products.findOneAndDelete(
       {
         item: req.params.item
@@ -578,6 +627,13 @@ app.delete('/products/:item', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -588,12 +644,6 @@ app.delete('/products/:item', async (req, res) => {
 
 // 上傳圖片
 app.post('/img/:item', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
   // 格式不符
   if (!req.headers['content-type'].includes('multipart/form-data')) {
     res.status(400)
@@ -616,6 +666,9 @@ app.post('/img/:item', async (req, res) => {
       res.send({ success: false, message: '伺服器錯誤' })
     } else {
       try {
+        const { authorization } = req.headers
+        const [, token] = authorization.split(' ')
+        jwt.verify(token, process.env.JWT_KEY)
         let name = ''
         if (process.env.FTP === 'true') {
           name = path.basename(req.file.path)
@@ -646,6 +699,13 @@ app.post('/img/:item', async (req, res) => {
           const message = error.errors[key].message
           res.status(400)
           res.send({ success: false, message })
+        } else if (error.name === 'TokenExpiredError') {
+          // 登入過期
+          res.status(401)
+          res.send({ success: false, message: '登入過期' })
+        } else if (error.name === 'JsonWebTokenError') {
+          res.status(400)
+          res.send({ success: false, message: 'Token異常' })
         } else {
           // 伺服器錯誤
           res.status(500)
@@ -680,12 +740,6 @@ app.get('/categorys', async (req, res) => {
 
 // 更新商品分類
 app.patch('/categorys/:item', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
   // 格式不符
   if (!req.headers['content-type'].includes('application/json')) {
     res.status(400)
@@ -694,6 +748,10 @@ app.patch('/categorys/:item', async (req, res) => {
   }
 
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    jwt.verify(token, process.env.JWT_KEY)
+
     // 資料更新成功的時候要把資料進DB
     await db.categorys.findOneAndUpdate(
       { item: req.params.item },
@@ -712,6 +770,13 @@ app.patch('/categorys/:item', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -722,12 +787,6 @@ app.patch('/categorys/:item', async (req, res) => {
 
 // 創建商品分類
 app.post('/categorys', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
   // 格式不符
   if (!req.headers['content-type'].includes('application/json')) {
     res.status(400)
@@ -736,6 +795,9 @@ app.post('/categorys', async (req, res) => {
   }
 
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    jwt.verify(token, process.env.JWT_KEY)
     const result = await db.categorys.create(
       {
         item: req.body.item,
@@ -753,6 +815,13 @@ app.post('/categorys', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -763,14 +832,11 @@ app.post('/categorys', async (req, res) => {
 
 // 刪除商品分類
 app.delete('/categorys/:item', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
-
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    jwt.verify(token, process.env.JWT_KEY)
+
     const result = await db.categorys.findOneAndDelete(
       {
         item: req.params.item
@@ -786,6 +852,13 @@ app.delete('/categorys/:item', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -819,12 +892,6 @@ app.get('/payments', async (req, res) => {
 
 // 更新付款方式
 app.patch('/payments/:item', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
   // 格式不符
   if (!req.headers['content-type'].includes('application/json')) {
     res.status(400)
@@ -833,6 +900,9 @@ app.patch('/payments/:item', async (req, res) => {
   }
 
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    jwt.verify(token, process.env.JWT_KEY)
     // 資料更新成功的時候要把資料進DB
     await db.payments.findOneAndUpdate(
       { item: req.params.item },
@@ -853,6 +923,13 @@ app.patch('/payments/:item', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -863,12 +940,6 @@ app.patch('/payments/:item', async (req, res) => {
 
 // 創建付款方式
 app.post('/payments', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
   // 格式不符
   if (!req.headers['content-type'].includes('application/json')) {
     res.status(400)
@@ -877,6 +948,9 @@ app.post('/payments', async (req, res) => {
   }
 
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    jwt.verify(token, process.env.JWT_KEY)
     const result = await db.payments.create(
       {
         item: req.body.item,
@@ -896,6 +970,13 @@ app.post('/payments', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -906,14 +987,10 @@ app.post('/payments', async (req, res) => {
 
 // 刪除付款方式
 app.delete('/payments/:item', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
-
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    jwt.verify(token, process.env.JWT_KEY)
     const result = await db.payments.findOneAndDelete(
       {
         item: req.params.item
@@ -929,6 +1006,13 @@ app.delete('/payments/:item', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -939,14 +1023,10 @@ app.delete('/payments/:item', async (req, res) => {
 
 // 取得所有會員訂單
 app.get('/back/orders', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
-
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    jwt.verify(token, process.env.JWT_KEY)
     const result = await db.orders.find()
 
     const datas = []
@@ -999,7 +1079,15 @@ app.get('/back/orders', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
+      console.log(error)
       // 伺服器錯誤
       res.status(500)
       res.send({ success: false, message: '伺服器錯誤' })
@@ -1009,12 +1097,6 @@ app.get('/back/orders', async (req, res) => {
 
 // 更新訂單
 app.patch('/back/orders/:item', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
   // 格式不符
   if (!req.headers['content-type'].includes('application/json')) {
     res.status(400)
@@ -1023,6 +1105,9 @@ app.patch('/back/orders/:item', async (req, res) => {
   }
 
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    jwt.verify(token, process.env.JWT_KEY)
     const result = await db.orders.findOneAndUpdate(
       {
         item: req.params.item
@@ -1039,6 +1124,13 @@ app.patch('/back/orders/:item', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -1048,14 +1140,11 @@ app.patch('/back/orders/:item', async (req, res) => {
 })
 
 app.delete('/back/orders/:item', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
-
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    jwt.verify(token, process.env.JWT_KEY)
+
     const result = await db.orders.findOneAndDelete(
       {
         item: req.params.item
@@ -1076,6 +1165,13 @@ app.delete('/back/orders/:item', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -1167,12 +1263,6 @@ app.get('/webdata', async (req, res) => {
 
 // 新增訂單資料
 app.post('/order', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
   // 格式不符
   if (!req.headers['content-type'].includes('application/json')) {
     res.status(400)
@@ -1197,10 +1287,13 @@ app.post('/order', async (req, res) => {
   }
 
   try {
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    const JWTData = jwt.verify(token, process.env.JWT_KEY)
     await db.orders.create(
       {
         item: Date.now(),
-        account: req.session.user,
+        account: JWTData.account,
         products: products,
         payment: req.body.payment,
         remark: req.body.remark
@@ -1215,6 +1308,13 @@ app.post('/order', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -1225,15 +1325,11 @@ app.post('/order', async (req, res) => {
 
 // 取得會員訂單
 app.get('/orders', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
-
   try {
-    const result = await db.orders.find({ account: req.session.user })
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    const JWTData = jwt.verify(token, process.env.JWT_KEY)
+    const result = await db.orders.find({ account: JWTData.account })
 
     const datas = []
     const dbProducts = await db.products.find()
@@ -1275,6 +1371,13 @@ app.get('/orders', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
@@ -1285,15 +1388,11 @@ app.get('/orders', async (req, res) => {
 
 // 取得會員訂單
 app.get('/orderDetail/:item', async (req, res) => {
-  // 沒有登入
-  if (req.session.user === undefined) {
-    res.status(401)
-    res.send({ success: false, message: '未登入' })
-    return
-  }
-
   try {
-    const result = await db.orders.find({ account: req.session.user, item: req.params.item })
+    const { authorization } = req.headers
+    const [, token] = authorization.split(' ')
+    const JWTData = jwt.verify(token, process.env.JWT_KEY)
+    const result = await db.orders.find({ account: JWTData.account, item: req.params.item })
 
     const datas = []
     const dbProducts = await db.products.find()
@@ -1335,6 +1434,13 @@ app.get('/orderDetail/:item', async (req, res) => {
       const message = error.errors[key].message
       res.status(400)
       res.send({ success: false, message })
+    } else if (error.name === 'TokenExpiredError') {
+      // 登入過期
+      res.status(401)
+      res.send({ success: false, message: '登入過期' })
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(400)
+      res.send({ success: false, message: 'Token異常' })
     } else {
       // 伺服器錯誤
       res.status(500)
