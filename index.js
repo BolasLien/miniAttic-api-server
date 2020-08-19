@@ -1,8 +1,8 @@
 import express from 'express'
 import bodyParser from 'body-parser'
 import cors from 'cors'
-import connectMongo from 'connect-mongo'
-import session from 'express-session'
+// import connectMongo from 'connect-mongo'
+// import session from 'express-session'
 import multer from 'multer'
 import md5 from 'md5'
 import dotenv from 'dotenv'
@@ -15,7 +15,7 @@ import db from './db.js'
 
 dotenv.config()
 
-const MongoStore = connectMongo(session)
+// const MongoStore = connectMongo(session)
 
 const app = express()
 
@@ -45,30 +45,30 @@ app.use(cors({
 }))
 
 // Session設定
-app.use(session({
-  secret: 'miniattic',
-  // 將 session 存入 mongodb
-  store: new MongoStore({
-    // 使用 mongoose 的資料庫連接
-    mongooseConnection: db.connection,
-    // 設定存入的 collection
-    collection: process.env.COLLECTION_SESSION
-  }),
-  // session 有效期間
-  cookie: {
-    // 1000 毫秒 = 一秒鐘
-    // 1000 毫秒 * 60 = 一分鐘
-    // 1000 毫秒 * 60 * 30 = 三十分鐘
-    maxAge: 1000 * 60 * 30
-    // secure: true,
-    // sameSite: 'none'
-  },
-  resave: true,
-  // 是否保存未修改的session
-  saveUninitialized: false,
-  // 是否每次重設過期時間
-  rolling: true
-}))
+// app.use(session({
+//   secret: 'miniattic',
+//   // 將 session 存入 mongodb
+//   store: new MongoStore({
+//     // 使用 mongoose 的資料庫連接
+//     mongooseConnection: db.connection,
+//     // 設定存入的 collection
+//     collection: process.env.COLLECTION_SESSION
+//   }),
+//   // session 有效期間
+//   cookie: {
+//     // 1000 毫秒 = 一秒鐘
+//     // 1000 毫秒 * 60 = 一分鐘
+//     // 1000 毫秒 * 60 * 30 = 三十分鐘
+//     maxAge: 1000 * 60 * 30
+//     // secure: true,
+//     // sameSite: 'none'
+//   },
+//   resave: true,
+//   // 是否保存未修改的session
+//   saveUninitialized: false,
+//   // 是否每次重設過期時間
+//   rolling: true
+// }))
 
 let storage
 // 開發環境放本機
