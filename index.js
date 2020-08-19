@@ -8,12 +8,14 @@ import path from 'path'
 import FTPStorage from 'multer-ftp'
 import jwt from 'jsonwebtoken'
 import axios from 'axios'
+import * as verify from './common/Verify.js'
 
 import db from './db.js'
+import dbusers from './models/user.js'
+import dbproducts from './models/product.js'
+
 import userRoutes from './routes/user.js'
 import productRoutes from './routes/product.js'
-import dbproducts from './models/product.js'
-import dbusers from './models/user.js'
 
 dotenv.config()
 
@@ -108,13 +110,8 @@ app.listen(process.env.PORT, () => {
 
 // 登入驗證
 app.post('/login', async (req, res) => {
-  if (!req.headers['content-type'].includes('application/json')) {
-    res.status(400)
-    res.send({ success: false, message: '格式不符' })
-    return
-  }
-
   try {
+    verify.contentTypeJSON(req)
     const result = await dbusers.find(
       {
         account: req.body.account,
@@ -137,29 +134,14 @@ app.post('/login', async (req, res) => {
       res.send({ success: false, message: '帳號密碼錯誤' })
     }
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
 // 管理者登入驗證
 app.post('/back/login', async (req, res) => {
-  if (!req.headers['content-type'].includes('application/json')) {
-    res.status(400)
-    res.send({ success: false, message: '格式不符' })
-    return
-  }
-
   try {
+    verify.contentTypeJSON(req)
     const result = await dbusers.find(
       {
         account: req.body.account,
@@ -194,17 +176,7 @@ app.post('/back/login', async (req, res) => {
       res.send({ success: false, message: '帳號密碼錯誤' })
     }
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
@@ -232,39 +204,19 @@ app.get('/heartbeat', async (req, res) => {
     res.status(200)
     res.send(isLogin)
   } catch (error) {
-    if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      res.status(500)
-      res.send('Error')
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
 // 內容編輯更新
 app.patch('/pages/:item', async (req, res) => {
-  // 格式不符
-  if (!req.headers['content-type'].includes('application/json')) {
-    res.status(400)
-    res.send({ success: false, message: '格式不符' })
-    return
-  }
-
   try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
+    verify.contentTypeJSON(req)
+    verify.jwtVerify(req)
 
     // 資料更新成功的時候要把資料進DB
     await db.pages.findOneAndUpdate(
-      {
-        item: req.params.item
-      }, {
+      { item: req.params.item }, {
         show: req.body.show,
         description1: req.body.description1,
         description2: req.body.description2,
@@ -276,24 +228,7 @@ app.patch('/pages/:item', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '資料更新成功' })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
@@ -316,21 +251,9 @@ app.get('/pages', async (req, res) => {
     }
 
     res.status(200)
-    res.send({
-      success: true, message: '資料查詢成功', datas
-    })
+    res.send({ success: true, message: '資料查詢成功', datas })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
@@ -360,17 +283,7 @@ app.get('/pages/:condition', async (req, res) => {
       success: true, message: '資料查詢成功', datas
     })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
@@ -397,8 +310,7 @@ app.get('/image/:item', async (req, res) => {
       imageCache.push({ item: req.params.item, image: response.data, ext: ext })
     }
   } catch (error) {
-    res.status(500)
-    res.send({ success: false, message: '伺服器錯誤' })
+    verify.ErrorResponse(error, res)
   }
 })
 
@@ -453,24 +365,7 @@ app.post('/img/:item', async (req, res) => {
         res.status(200)
         res.send({ success: true, message: '圖片上傳成功', name })
       } catch (error) {
-        if (error.name === 'ValidationError') {
-          // 資料格式錯誤
-          const key = Object.keys(error.errors)[0]
-          const message = error.errors[key].message
-          res.status(400)
-          res.send({ success: false, message })
-        } else if (error.name === 'TokenExpiredError') {
-          // 登入過期
-          res.status(401)
-          res.send({ success: false, message: '登入過期' })
-        } else if (error.name === 'JsonWebTokenError') {
-          res.status(400)
-          res.send({ success: false, message: 'Token異常' })
-        } else {
-          // 伺服器錯誤
-          res.status(500)
-          res.send({ success: false, message: '伺服器錯誤' })
-        }
+        verify.ErrorResponse(error, res)
       }
     }
   })
@@ -484,33 +379,15 @@ app.get('/categorys', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '資料查詢成功', datas })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
 // 更新商品分類
 app.patch('/categorys/:item', async (req, res) => {
-  // 格式不符
-  if (!req.headers['content-type'].includes('application/json')) {
-    res.status(400)
-    res.send({ success: false, message: '格式不符' })
-    return
-  }
-
   try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
+    verify.contentTypeJSON(req)
+    verify.jwtVerify(req)
 
     // 資料更新成功的時候要把資料進DB
     await db.categorys.findOneAndUpdate(
@@ -524,40 +401,15 @@ app.patch('/categorys/:item', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '資料更新成功' })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
 // 創建商品分類
 app.post('/categorys', async (req, res) => {
-  // 格式不符
-  if (!req.headers['content-type'].includes('application/json')) {
-    res.status(400)
-    res.send({ success: false, message: '格式不符' })
-    return
-  }
-
   try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
+    verify.contentTypeJSON(req)
+    verify.jwtVerify(req)
     const result = await db.categorys.create(
       {
         item: req.body.item,
@@ -569,61 +421,23 @@ app.post('/categorys', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '資料建立成功', result })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
 // 刪除商品分類
 app.delete('/categorys/:item', async (req, res) => {
   try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
+    verify.jwtVerify(req)
 
     const result = await db.categorys.findOneAndDelete(
-      {
-        item: req.params.item
-      }
+      { item: req.params.item }
     )
 
     res.status(200)
     res.send({ success: true, message: '資料已移除', result })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
@@ -636,33 +450,15 @@ app.get('/payments', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '資料查詢成功', datas })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
 // 更新付款方式
 app.patch('/payments/:item', async (req, res) => {
-  // 格式不符
-  if (!req.headers['content-type'].includes('application/json')) {
-    res.status(400)
-    res.send({ success: false, message: '格式不符' })
-    return
-  }
-
   try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
+    verify.contentTypeJSON(req)
+    verify.jwtVerify(req)
     // 資料更新成功的時候要把資料進DB
     await db.payments.findOneAndUpdate(
       { item: req.params.item },
@@ -677,40 +473,15 @@ app.patch('/payments/:item', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '資料更新成功' })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
 // 創建付款方式
 app.post('/payments', async (req, res) => {
-  // 格式不符
-  if (!req.headers['content-type'].includes('application/json')) {
-    res.status(400)
-    res.send({ success: false, message: '格式不符' })
-    return
-  }
-
   try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
+    verify.contentTypeJSON(req)
+    verify.jwtVerify(req)
     const result = await db.payments.create(
       {
         item: req.body.item,
@@ -724,69 +495,29 @@ app.post('/payments', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '資料建立成功', result })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
 // 刪除付款方式
 app.delete('/payments/:item', async (req, res) => {
   try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
+    verify.jwtVerify(req)
     const result = await db.payments.findOneAndDelete(
-      {
-        item: req.params.item
-      }
+      { item: req.params.item }
     )
 
     res.status(200)
     res.send({ success: true, message: '資料已移除', result })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
 // 取得所有會員訂單
 app.get('/back/orders', async (req, res) => {
   try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
+    verify.jwtVerify(req)
     const result = await db.orders.find()
 
     const datas = []
@@ -833,81 +564,33 @@ app.get('/back/orders', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '資料查詢成功', datas })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
 // 更新訂單
 app.patch('/back/orders/:item', async (req, res) => {
-  // 格式不符
-  if (!req.headers['content-type'].includes('application/json')) {
-    res.status(400)
-    res.send({ success: false, message: '格式不符' })
-    return
-  }
-
   try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
+    verify.contentTypeJSON(req)
+    verify.jwtVerify(req)
     const result = await db.orders.findOneAndUpdate(
-      {
-        item: req.params.item
-      },
+      { item: req.params.item },
       req.body
     )
 
     res.status(200)
     res.send({ success: true, message: '商品更新成功', result })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
 app.delete('/back/orders/:item', async (req, res) => {
   try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
+    verify.jwtVerify(req)
 
     const result = await db.orders.findOneAndDelete(
-      {
-        item: req.params.item
-      }
+      { item: req.params.item }
     )
 
     if (result) {
@@ -918,24 +601,7 @@ app.delete('/back/orders/:item', async (req, res) => {
       res.send({ success: false, message: '沒有這個東西' })
     }
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
@@ -1006,29 +672,12 @@ app.get('/webdata', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '資料查詢成功', pages, products, categorys, payments })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
 // 新增訂單資料
 app.post('/order', async (req, res) => {
-  // 格式不符
-  if (!req.headers['content-type'].includes('application/json')) {
-    res.status(400)
-    res.send({ success: false, message: '格式不符' })
-    return
-  }
-
   let products = req.body.products
   // 檢查是不是有效的訂單
   if (products.length === 0) {
@@ -1046,6 +695,7 @@ app.post('/order', async (req, res) => {
   }
 
   try {
+    verify.contentTypeJSON(req)
     const { authorization } = req.headers
     const [, token] = authorization.split(' ')
     const JWTData = jwt.verify(token, process.env.JWT_KEY)
@@ -1061,24 +711,7 @@ app.post('/order', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '訂單送出成功' })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
@@ -1124,24 +757,7 @@ app.get('/orders', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '資料查詢成功', datas })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })
 
@@ -1187,23 +803,6 @@ app.get('/orderDetail/:item', async (req, res) => {
     res.status(200)
     res.send({ success: true, message: '資料查詢成功', datas })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
+    verify.ErrorResponse(error, res)
   }
 })

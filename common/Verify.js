@@ -1,4 +1,7 @@
+import dotenv from 'dotenv'
 import jwt from 'jsonwebtoken'
+
+dotenv.config()
 
 export const ErrorResponse = (error, res) => {
   if (error.name === 'ValidationError') {
@@ -14,6 +17,13 @@ export const ErrorResponse = (error, res) => {
     console.log(error)
     res.status(500)
     res.send({ success: false, message: '伺服器錯誤' })
+  }
+}
+
+export const contentTypeFD = (req) => {
+  // 格式不符
+  if (!req.headers['content-type'].includes('multipart/form-data')) {
+    throw new UserException(400, '格式不符')
   }
 }
 
