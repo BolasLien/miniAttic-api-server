@@ -12,6 +12,7 @@ import jwt from 'jsonwebtoken'
 import axios from 'axios'
 
 import db from './db.js'
+import productRoutes from './routes/product.js'
 
 dotenv.config()
 
@@ -113,6 +114,7 @@ const upload = multer({
   }
 })
 
+app.use('/products', productRoutes)
 // 監聽
 app.listen(process.env.PORT, () => {
   console.log(`Listening on: http://localhost:${process.env.PORT}`)
@@ -461,184 +463,9 @@ app.get('/image/:item', async (req, res) => {
       imageCache.push({ item: req.params.item, image: response.data, ext: ext })
     }
   } catch (error) {
-    console.log(error)
+    // console.log(error)
     res.status(500)
     res.send({ success: false, message: '伺服器錯誤' })
-  }
-})
-
-// 新增商品
-app.post('/products', async (req, res) => {
-  // 格式不符
-  if (!req.headers['content-type'].includes('application/json')) {
-    res.status(400)
-    res.send({ success: false, message: '格式不符' })
-    return
-  }
-
-  try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
-
-    const result = await db.products.create(
-      {
-        item: Date.now(),
-        class: req.body.class,
-        name: req.body.name,
-        subheading: req.body.subheading,
-        intro: req.body.intro,
-        price: req.body.price,
-        description: req.body.description,
-        show: req.body.show
-      }
-    )
-
-    res.status(200)
-    res.send({ success: true, message: '資料建立成功', result })
-  } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
-  }
-})
-
-// 取得商品
-app.get('/products', async (req, res) => {
-  try {
-    const result = await db.products.find()
-
-    const datas = []
-    for (const value of result) {
-      datas.push({
-        item: value.item,
-        src: value.img,
-        class: value.class,
-        name: value.name,
-        show: value.show,
-        subheading: value.subheading,
-        intro: value.intro,
-        price: value.price,
-        description: value.description
-      })
-    }
-
-    res.status(200)
-    res.send({ success: true, message: '資料查詢成功', datas })
-  } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
-  }
-})
-
-// 更新商品
-app.patch('/products/:item', async (req, res) => {
-  // 格式不符
-  if (!req.headers['content-type'].includes('application/json')) {
-    res.status(400)
-    res.send({ success: false, message: '格式不符' })
-    return
-  }
-
-  try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
-    const result = await db.products.findOneAndUpdate(
-      {
-        item: req.params.item
-      },
-      {
-        class: req.body.class,
-        name: req.body.name,
-        subheading: req.body.subheading,
-        intro: req.body.intro,
-        price: req.body.price,
-        description: req.body.description,
-        show: req.body.show
-      }
-    )
-
-    res.status(200)
-    res.send({ success: true, message: '商品更新成功', result })
-  } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
-  }
-})
-
-app.delete('/products/:item', async (req, res) => {
-  try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
-    const result = await db.products.findOneAndDelete(
-      {
-        item: req.params.item
-      }
-    )
-
-    res.status(200)
-    res.send({ success: true, message: '資料已移除', result })
-  } catch (error) {
-    if (error.name === 'ValidationError') {
-      // 資料格式錯誤
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else if (error.name === 'TokenExpiredError') {
-      // 登入過期
-      res.status(401)
-      res.send({ success: false, message: '登入過期' })
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(400)
-      res.send({ success: false, message: 'Token異常' })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
   }
 })
 

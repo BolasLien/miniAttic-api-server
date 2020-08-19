@@ -105,42 +105,42 @@ const pageSchema = new Schema({
   versionKey: false
 })
 
-const productSchema = new Schema({
-  item: {
-    type: String,
-    unique: '編號重複',
-    required: [true, '沒有商品編號']
-  },
-  class: {
-    type: String
-  },
-  img: {
-    // 例如: /images/xxx.jpg 或 /miniattic/assets/img/xxx.jpg
-    type: String,
-    default: '1594090312145.jpg'
-  },
-  name: {
-    type: String
-  },
-  subheading: {
-    type: String
-  },
-  intro: {
-    type: String
-  },
-  price: {
-    type: String
-  },
-  description: {
-    type: String
-  },
-  show: {
-    type: Boolean,
-    default: false
-  }
-}, {
-  versionKey: false
-})
+// const productSchema = new Schema({
+//   item: {
+//     type: String,
+//     unique: '編號重複',
+//     required: [true, '沒有商品編號']
+//   },
+//   class: {
+//     type: String
+//   },
+//   img: {
+//     // 例如: /images/xxx.jpg 或 /miniattic/assets/img/xxx.jpg
+//     type: String,
+//     default: '1594090312145.jpg'
+//   },
+//   name: {
+//     type: String
+//   },
+//   subheading: {
+//     type: String
+//   },
+//   intro: {
+//     type: String
+//   },
+//   price: {
+//     type: String
+//   },
+//   description: {
+//     type: String
+//   },
+//   show: {
+//     type: Boolean,
+//     default: false
+//   }
+// }, {
+//   versionKey: false
+// })
 
 const categorySchema = new Schema({
   item: {
@@ -214,7 +214,7 @@ const orderSchema = new Schema({
 const users = mongoose.model(process.env.COLLECTION_USER, userSchema)
 const files = mongoose.model(process.env.COLLECTION_FILE, fileSchema)
 const pages = mongoose.model(process.env.COLLECTION_PAGE, pageSchema)
-const products = mongoose.model(process.env.COLLECTION_PRODUCT, productSchema)
+// const products = mongoose.model(process.env.COLLECTION_PRODUCT, productSchema)
 const categorys = mongoose.model(process.env.COLLECTION_CATEGORY, categorySchema)
 const payments = mongoose.model(process.env.COLLECTION_PAYMENT, paymentSchema)
 const orders = mongoose.model(process.env.COLLECTION_ORDER, orderSchema)
@@ -224,7 +224,7 @@ export default {
   users,
   files,
   pages,
-  products,
+  // products,
   categorys,
   payments,
   orders,
