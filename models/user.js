@@ -1,5 +1,8 @@
 import mongoose from 'mongoose'
 import validator from 'validator'
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 const Schema = mongoose.Schema
 
@@ -49,4 +52,6 @@ const userSchema = new Schema({
   versionKey: false
 })
 
-export const users = mongoose.model(process.env.COLLECTION_USER, userSchema)
+const users = mongoose.model(process.env.COLLECTION_USER, userSchema)
+
+export default users

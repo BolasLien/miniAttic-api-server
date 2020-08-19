@@ -10,7 +10,10 @@ import jwt from 'jsonwebtoken'
 import axios from 'axios'
 
 import db from './db.js'
+import userRoutes from './routes/user.js'
 import productRoutes from './routes/product.js'
+import dbproducts from './models/product.js'
+import dbusers from './models/user.js'
 
 dotenv.config()
 
@@ -84,6 +87,7 @@ const upload = multer({
   }
 })
 
+app.use('/users', userRoutes)
 app.use('/products', productRoutes)
 // 監聽
 app.listen(process.env.PORT, () => {
@@ -102,38 +106,6 @@ app.listen(process.env.PORT, () => {
 //   }
 // })
 
-// 註冊新用戶
-app.post('/users', async (req, res) => {
-  if (!req.headers['content-type'].includes('application/json')) {
-    res.status(400)
-    res.send({ success: false, message: '格式不符' })
-    return
-  }
-
-  try {
-    await db.users.create({
-      name: req.body.name,
-      phone: req.body.phone,
-      account: req.body.account,
-      password: md5(req.body.password)
-    })
-    res.status(200)
-    res.send({ success: true, message: '會員註冊成功' })
-  } catch (error) {
-    // 資料格式錯誤
-    if (error.errors.account.properties.message === '電子信箱重複') {
-      const key = Object.keys(error.errors)[0]
-      const message = error.errors[key].message
-      res.status(400)
-      res.send({ success: false, message })
-    } else {
-      // 伺服器錯誤
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    }
-  }
-})
-
 // 登入驗證
 app.post('/login', async (req, res) => {
   if (!req.headers['content-type'].includes('application/json')) {
@@ -143,7 +115,7 @@ app.post('/login', async (req, res) => {
   }
 
   try {
-    const result = await db.users.find(
+    const result = await dbusers.find(
       {
         account: req.body.account,
         password: md5(req.body.password)
@@ -188,7 +160,7 @@ app.post('/back/login', async (req, res) => {
   }
 
   try {
-    const result = await db.users.find(
+    const result = await dbusers.find(
       {
         account: req.body.account,
         password: md5(req.body.password)
@@ -467,7 +439,7 @@ app.post('/img/:item', async (req, res) => {
         // 檔案上傳成功的時候要把資料進DB
         // req.body.collection 要更動哪個db_collection
         if (req.body.collection === 'product') {
-          await db.products.findOneAndUpdate(
+          await dbproducts.findOneAndUpdate(
             { item: req.params.item },
             { img: name }
           )
@@ -818,7 +790,7 @@ app.get('/back/orders', async (req, res) => {
     const result = await db.orders.find()
 
     const datas = []
-    const dbProducts = await db.products.find()
+    const dbProducts = await dbproducts.find()
     for (const value of result) {
       const item = value.item
       const account = value.account
@@ -987,7 +959,7 @@ app.get('/webdata', async (req, res) => {
     }
 
     // 拿商品資料
-    result = await db.products.find()
+    result = await dbproducts.find()
     const products = []
     for (const value of result) {
       if (value.show) {
@@ -1119,7 +1091,7 @@ app.get('/orders', async (req, res) => {
     const result = await db.orders.find({ account: JWTData.account })
 
     const datas = []
-    const dbProducts = await db.products.find()
+    const dbProducts = await dbproducts.find()
     for (const value of result) {
       const item = value.item
 
@@ -1182,7 +1154,7 @@ app.get('/orderDetail/:item', async (req, res) => {
     const result = await db.orders.find({ account: JWTData.account, item: req.params.item })
 
     const datas = []
-    const dbProducts = await db.products.find()
+    const dbProducts = await dbproducts.find()
     for (const value of result) {
       const item = value.item
 
