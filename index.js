@@ -1,8 +1,6 @@
 import express from 'express'
 import bodyParser from 'body-parser'
 import cors from 'cors'
-// import connectMongo from 'connect-mongo'
-// import session from 'express-session'
 import multer from 'multer'
 import md5 from 'md5'
 import dotenv from 'dotenv'
@@ -15,8 +13,6 @@ import db from './db.js'
 import productRoutes from './routes/product.js'
 
 dotenv.config()
-
-// const MongoStore = connectMongo(session)
 
 const app = express()
 
@@ -44,32 +40,6 @@ app.use(cors({
   },
   credentials: true
 }))
-
-// Session設定
-// app.use(session({
-//   secret: 'miniattic',
-//   // 將 session 存入 mongodb
-//   store: new MongoStore({
-//     // 使用 mongoose 的資料庫連接
-//     mongooseConnection: db.connection,
-//     // 設定存入的 collection
-//     collection: process.env.COLLECTION_SESSION
-//   }),
-//   // session 有效期間
-//   cookie: {
-//     // 1000 毫秒 = 一秒鐘
-//     // 1000 毫秒 * 60 = 一分鐘
-//     // 1000 毫秒 * 60 * 30 = 三十分鐘
-//     maxAge: 1000 * 60 * 30
-//     // secure: true,
-//     // sameSite: 'none'
-//   },
-//   resave: true,
-//   // 是否保存未修改的session
-//   saveUninitialized: false,
-//   // 是否每次重設過期時間
-//   rolling: true
-// }))
 
 let storage
 // 開發環境放本機
@@ -267,16 +237,8 @@ app.post('/back/login', async (req, res) => {
 })
 
 app.delete('/logout', async (req, res) => {
-  req.session.destroy(error => {
-    if (error) {
-      res.status(500)
-      res.send({ success: false, message: '伺服器錯誤' })
-    } else {
-      res.clearCookie()
-      res.status(200)
-      res.send({ success: true, message: '' })
-    }
-  })
+  res.status(200)
+  res.send({ success: true, message: '' })
 })
 
 app.get('/heartbeat', async (req, res) => {
@@ -463,7 +425,6 @@ app.get('/image/:item', async (req, res) => {
       imageCache.push({ item: req.params.item, image: response.data, ext: ext })
     }
   } catch (error) {
-    // console.log(error)
     res.status(500)
     res.send({ success: false, message: '伺服器錯誤' })
   }
@@ -914,7 +875,6 @@ app.get('/back/orders', async (req, res) => {
       res.status(400)
       res.send({ success: false, message: 'Token異常' })
     } else {
-      console.log(error)
       // 伺服器錯誤
       res.status(500)
       res.send({ success: false, message: '伺服器錯誤' })
