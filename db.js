@@ -142,82 +142,82 @@ const pageSchema = new Schema({
 //   versionKey: false
 // })
 
-const categorySchema = new Schema({
-  item: {
-    type: String,
-    unique: '編號重複',
-    required: [true, '沒有分類編號']
-  },
-  name: {
-    type: String,
-    default: '尚未定義名稱'
-  },
-  show: {
-    type: Boolean,
-    default: false
-  }
-}, {
-  versionKey: false
-})
+// const categorySchema = new Schema({
+//   item: {
+//     type: String,
+//     unique: '編號重複',
+//     required: [true, '沒有分類編號']
+//   },
+//   name: {
+//     type: String,
+//     default: '尚未定義名稱'
+//   },
+//   show: {
+//     type: Boolean,
+//     default: false
+//   }
+// }, {
+//   versionKey: false
+// })
 
-const paymentSchema = new Schema({
-  // 付款方式
-  item: {
-    type: String,
-    unique: '編號重複',
-    required: [true, '沒有付款編號']
-  },
-  name: String,
-  price: Number,
-  description: {
-    type: String
-  },
-  show: {
-    type: Boolean,
-    default: false
-  }
-})
+// const paymentSchema = new Schema({
+//   // 付款方式
+//   item: {
+//     type: String,
+//     unique: '編號重複',
+//     required: [true, '沒有付款編號']
+//   },
+//   name: String,
+//   price: Number,
+//   description: {
+//     type: String
+//   },
+//   show: {
+//     type: Boolean,
+//     default: false
+//   }
+// })
 
-const orderSchema = new Schema({
-  // 訂單資料
-  item: {
-    type: String,
-    unique: '編號重複',
-    required: [true, '沒有訂單編號']
-  },
-  account: {
-    type: String,
-    required: [true, '沒有會員帳號']
-  },
-  products: {
-    type: Object,
-    required: [true, '沒有商品']
-  },
-  payment: {
-    type: Object,
-    required: [true, '沒有付款方式']
-  },
-  remark: {
-    type: String,
-    maxlength: [200, '備註最多 200 個字']
-  },
-  status: {
-    type: Number,
-    // 0 訂單成立，尚未付款
-    // 1 訂單已付款，待出貨
-    // 2 出貨中
-    // 3 已送達
-    default: 0
-  }
-})
+// const orderSchema = new Schema({
+//   // 訂單資料
+//   item: {
+//     type: String,
+//     unique: '編號重複',
+//     required: [true, '沒有訂單編號']
+//   },
+//   account: {
+//     type: String,
+//     required: [true, '沒有會員帳號']
+//   },
+//   products: {
+//     type: Object,
+//     required: [true, '沒有商品']
+//   },
+//   payment: {
+//     type: Object,
+//     required: [true, '沒有付款方式']
+//   },
+//   remark: {
+//     type: String,
+//     maxlength: [200, '備註最多 200 個字']
+//   },
+//   status: {
+//     type: Number,
+//     // 0 訂單成立，尚未付款
+//     // 1 訂單已付款，待出貨
+//     // 2 出貨中
+//     // 3 已送達
+//     default: 0
+//   }
+// })
 
 // const users = mongoose.model(process.env.COLLECTION_USER, userSchema)
 const files = mongoose.model(process.env.COLLECTION_FILE, fileSchema)
 const pages = mongoose.model(process.env.COLLECTION_PAGE, pageSchema)
 // const products = mongoose.model(process.env.COLLECTION_PRODUCT, productSchema)
-const categorys = mongoose.model(process.env.COLLECTION_CATEGORY, categorySchema)
-const payments = mongoose.model(process.env.COLLECTION_PAYMENT, paymentSchema)
-const orders = mongoose.model(process.env.COLLECTION_ORDER, orderSchema)
+// const categorys = mongoose.model(process.env.COLLECTION_CATEGORY, categorySchema)
+// const payments = mongoose.model(process.env.COLLECTION_PAYMENT, paymentSchema)
+// const orders = mongoose.model(process.env.COLLECTION_ORDER, orderSchema)
 const connection = mongoose.connection
 
 export default {
@@ -225,8 +225,8 @@ export default {
   files,
   pages,
   // products,
-  categorys,
-  payments,
-  orders,
+  // categorys,
+  // payments,
+  // orders,
   connection
 }

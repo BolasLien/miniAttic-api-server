@@ -13,9 +13,15 @@ import * as verify from './common/Verify.js'
 import db from './db.js'
 import dbusers from './models/user.js'
 import dbproducts from './models/product.js'
+import dbcategorys from './models/category.js'
+import dbpayments from './models/payment.js'
+import dborders from './models/order.js'
 
 import userRoutes from './routes/user.js'
 import productRoutes from './routes/product.js'
+import categoryRoutes from './routes/category.js'
+import paymentRoutes from './routes/payment.js'
+import orderRoutes from './routes/order.js'
 
 dotenv.config()
 
@@ -91,6 +97,10 @@ const upload = multer({
 
 app.use('/users', userRoutes)
 app.use('/products', productRoutes)
+app.use('/categorys', categoryRoutes)
+app.use('/payments', paymentRoutes)
+app.use('/orders', orderRoutes)
+
 // 監聽
 app.listen(process.env.PORT, () => {
   console.log(`Listening on: http://localhost:${process.env.PORT}`)
@@ -187,16 +197,9 @@ app.delete('/logout', async (req, res) => {
 
 app.get('/heartbeat', async (req, res) => {
   let isLogin = false
-  const { authorization } = req.headers
-  if (!authorization) {
-    res.status(403)
-    res.send('Error')
-    return
-  }
 
   try {
-    const [, token] = authorization.split(' ')
-    const JWTData = jwt.verify(token, process.env.JWT_KEY)
+    const JWTData = verify.jwtVerify(req)
     if (JWTData) {
       isLogin = true
     }
@@ -371,154 +374,11 @@ app.post('/img/:item', async (req, res) => {
   })
 })
 
-// 拿商品分類
-app.get('/categorys', async (req, res) => {
-  try {
-    const datas = await db.categorys.find()
-
-    res.status(200)
-    res.send({ success: true, message: '資料查詢成功', datas })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// 更新商品分類
-app.patch('/categorys/:item', async (req, res) => {
-  try {
-    verify.contentTypeJSON(req)
-    verify.jwtVerify(req)
-
-    // 資料更新成功的時候要把資料進DB
-    await db.categorys.findOneAndUpdate(
-      { item: req.params.item },
-      {
-        name: req.body.name,
-        show: req.body.show
-      }
-    )
-
-    res.status(200)
-    res.send({ success: true, message: '資料更新成功' })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// 創建商品分類
-app.post('/categorys', async (req, res) => {
-  try {
-    verify.contentTypeJSON(req)
-    verify.jwtVerify(req)
-    const result = await db.categorys.create(
-      {
-        item: req.body.item,
-        name: req.body.name,
-        show: req.body.show
-      }
-    )
-
-    res.status(200)
-    res.send({ success: true, message: '資料建立成功', result })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// 刪除商品分類
-app.delete('/categorys/:item', async (req, res) => {
-  try {
-    verify.jwtVerify(req)
-
-    const result = await db.categorys.findOneAndDelete(
-      { item: req.params.item }
-    )
-
-    res.status(200)
-    res.send({ success: true, message: '資料已移除', result })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// ------------------------------------------------------------------
-// 拿付款方式
-app.get('/payments', async (req, res) => {
-  try {
-    const datas = await db.payments.find()
-
-    res.status(200)
-    res.send({ success: true, message: '資料查詢成功', datas })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// 更新付款方式
-app.patch('/payments/:item', async (req, res) => {
-  try {
-    verify.contentTypeJSON(req)
-    verify.jwtVerify(req)
-    // 資料更新成功的時候要把資料進DB
-    await db.payments.findOneAndUpdate(
-      { item: req.params.item },
-      {
-        name: req.body.name,
-        price: req.body.price,
-        description: req.body.description,
-        show: req.body.show
-      }
-    )
-
-    res.status(200)
-    res.send({ success: true, message: '資料更新成功' })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// 創建付款方式
-app.post('/payments', async (req, res) => {
-  try {
-    verify.contentTypeJSON(req)
-    verify.jwtVerify(req)
-    const result = await db.payments.create(
-      {
-        item: req.body.item,
-        name: req.body.name,
-        price: req.body.price,
-        description: req.body.description,
-        show: req.body.show
-      }
-    )
-
-    res.status(200)
-    res.send({ success: true, message: '資料建立成功', result })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// 刪除付款方式
-app.delete('/payments/:item', async (req, res) => {
-  try {
-    verify.jwtVerify(req)
-    const result = await db.payments.findOneAndDelete(
-      { item: req.params.item }
-    )
-
-    res.status(200)
-    res.send({ success: true, message: '資料已移除', result })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
 // 取得所有會員訂單
 app.get('/back/orders', async (req, res) => {
   try {
     verify.jwtVerify(req)
-    const result = await db.orders.find()
+    const result = await dborders.find()
 
     const datas = []
     const dbProducts = await dbproducts.find()
@@ -573,7 +433,7 @@ app.patch('/back/orders/:item', async (req, res) => {
   try {
     verify.contentTypeJSON(req)
     verify.jwtVerify(req)
-    const result = await db.orders.findOneAndUpdate(
+    const result = await dborders.findOneAndUpdate(
       { item: req.params.item },
       req.body
     )
@@ -589,7 +449,7 @@ app.delete('/back/orders/:item', async (req, res) => {
   try {
     verify.jwtVerify(req)
 
-    const result = await db.orders.findOneAndDelete(
+    const result = await dborders.findOneAndDelete(
       { item: req.params.item }
     )
 
@@ -643,7 +503,7 @@ app.get('/webdata', async (req, res) => {
     }
 
     // 拿商品分類
-    result = await db.categorys.find()
+    result = await dbcategorys.find()
     let categorys = []
     for (const value of result) {
       if (value.show) {
@@ -656,7 +516,7 @@ app.get('/webdata', async (req, res) => {
     categorys = categorys.sort(function (a, b) { return a.item > b.item ? 1 : -1 })
 
     // 拿付款方式
-    result = await db.payments.find()
+    result = await dbpayments.find()
     const payments = []
     for (const value of result) {
       if (value.show) {
@@ -671,137 +531,6 @@ app.get('/webdata', async (req, res) => {
 
     res.status(200)
     res.send({ success: true, message: '資料查詢成功', pages, products, categorys, payments })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// 新增訂單資料
-app.post('/order', async (req, res) => {
-  let products = req.body.products
-  // 檢查是不是有效的訂單
-  if (products.length === 0) {
-    res.status(400)
-    res.send({ success: false, message: '訂單沒有商品' })
-    return
-  } else {
-    // 拿數量大於零的商品
-    products = req.body.products.filter(e => e.amount > 0)
-    if (products.length === 0) {
-      res.status(400)
-      res.send({ success: false, message: '訂單沒有商品' })
-      return
-    }
-  }
-
-  try {
-    verify.contentTypeJSON(req)
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    const JWTData = jwt.verify(token, process.env.JWT_KEY)
-    await db.orders.create(
-      {
-        item: Date.now(),
-        account: JWTData.account,
-        products: products,
-        payment: req.body.payment,
-        remark: req.body.remark
-      }
-    )
-    res.status(200)
-    res.send({ success: true, message: '訂單送出成功' })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// 取得會員訂單
-app.get('/orders', async (req, res) => {
-  try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    const JWTData = jwt.verify(token, process.env.JWT_KEY)
-    const result = await db.orders.find({ account: JWTData.account })
-
-    const datas = []
-    const dbProducts = await dbproducts.find()
-    for (const value of result) {
-      const item = value.item
-
-      // 找真正的商品資料
-      const products = []
-      for (const v of value.products) {
-        const product = dbProducts.find(e => e.item === v.item)
-        products.push({
-          item: product.item,
-          amount: v.amount,
-          name: product.name,
-          src: product.img,
-          price: product.price
-        })
-      }
-
-      const payment = value.payment
-      const remark = value.remark
-      const status = value.status
-
-      datas.push({
-        item,
-        products,
-        payment,
-        remark,
-        status
-      })
-    }
-
-    res.status(200)
-    res.send({ success: true, message: '資料查詢成功', datas })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// 取得會員訂單
-app.get('/orderDetail/:item', async (req, res) => {
-  try {
-    const { authorization } = req.headers
-    const [, token] = authorization.split(' ')
-    const JWTData = jwt.verify(token, process.env.JWT_KEY)
-    const result = await db.orders.find({ account: JWTData.account, item: req.params.item })
-
-    const datas = []
-    const dbProducts = await dbproducts.find()
-    for (const value of result) {
-      const item = value.item
-
-      // 找真正的商品資料
-      const products = []
-      for (const v of value.products) {
-        const product = dbProducts.find(e => e.item === v.item)
-        products.push({
-          item: product.item,
-          amount: v.amount,
-          name: product.name,
-          src: product.img,
-          price: product.price
-        })
-      }
-
-      const payment = value.payment
-      const remark = value.remark
-      const status = value.status
-
-      datas.push({
-        item,
-        products,
-        payment,
-        remark,
-        status
-      })
-    }
-
-    res.status(200)
-    res.send({ success: true, message: '資料查詢成功', datas })
   } catch (error) {
     verify.ErrorResponse(error, res)
   }
