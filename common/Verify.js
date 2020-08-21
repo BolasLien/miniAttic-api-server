@@ -37,7 +37,8 @@ export const jwtVerify = (req) => {
   try {
     const { authorization } = req.headers
     const [, token] = authorization.split(' ')
-    jwt.verify(token, process.env.JWT_KEY)
+    const jwtData = jwt.verify(token, process.env.JWT_KEY)
+    return jwtData
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
       throw new UserException(401, '登入過期')
