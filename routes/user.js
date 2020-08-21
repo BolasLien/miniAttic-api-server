@@ -13,7 +13,7 @@ router.get('/', getUsers)
 // 這裡最後的路徑會是 /users/:account
 router.patch('/:account', updateUser)
 
-// 這裡最後的路徑會是 /users/:id
+// 這裡最後的路徑會是 /users/:account
 router.delete('/:account', deleteUser)
 
 export default router
