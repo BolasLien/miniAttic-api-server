@@ -16,12 +16,14 @@ import dbproducts from './models/product.js'
 import dbcategorys from './models/category.js'
 import dbpayments from './models/payment.js'
 import dborders from './models/order.js'
+import dbpages from './models/page.js'
 
 import userRoutes from './routes/user.js'
 import productRoutes from './routes/product.js'
 import categoryRoutes from './routes/category.js'
 import paymentRoutes from './routes/payment.js'
 import orderRoutes from './routes/order.js'
+import pageRoutes from './routes/page.js'
 
 dotenv.config()
 
@@ -100,6 +102,7 @@ app.use('/products', productRoutes)
 app.use('/categorys', categoryRoutes)
 app.use('/payments', paymentRoutes)
 app.use('/orders', orderRoutes)
+app.use('/pages', pageRoutes)
 
 // 監聽
 app.listen(process.env.PORT, () => {
@@ -211,85 +214,6 @@ app.get('/heartbeat', async (req, res) => {
   }
 })
 
-// 內容編輯更新
-app.patch('/pages/:item', async (req, res) => {
-  try {
-    verify.contentTypeJSON(req)
-    verify.jwtVerify(req)
-
-    // 資料更新成功的時候要把資料進DB
-    await db.pages.findOneAndUpdate(
-      { item: req.params.item }, {
-        show: req.body.show,
-        description1: req.body.description1,
-        description2: req.body.description2,
-        description3: req.body.description3,
-        link: req.body.link
-      }
-    )
-
-    res.status(200)
-    res.send({ success: true, message: '資料更新成功' })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// pages的資料 全部
-app.get('/pages', async (req, res) => {
-  try {
-    const result = await db.pages.find()
-
-    const datas = []
-    for (const value of result) {
-      datas.push({
-        item: value.item,
-        src: value.img,
-        description1: value.description1,
-        description2: value.description2,
-        description3: value.description3,
-        link: value.link,
-        show: value.show
-      })
-    }
-
-    res.status(200)
-    res.send({ success: true, message: '資料查詢成功', datas })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// pages的資料 條件查詢
-app.get('/pages/:condition', async (req, res) => {
-  try {
-    const result = await db.pages.find({
-      // 查詢符合req.params.condition的item
-      item: { $regex: req.params.condition }
-    })
-
-    const datas = []
-    for (const value of result) {
-      datas.push({
-        item: value.item,
-        src: value.img,
-        description1: value.description1,
-        description2: value.description2,
-        description3: value.description3,
-        link: value.link,
-        show: value.show
-      })
-    }
-
-    res.status(200)
-    res.send({
-      success: true, message: '資料查詢成功', datas
-    })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
 const imageCache = []
 
 // 拿圖片api
@@ -359,7 +283,7 @@ app.post('/img/:item', async (req, res) => {
             { img: name }
           )
         } else if (req.body.collection === 'page') {
-          await db.pages.findOneAndUpdate(
+          await dbpages.findOneAndUpdate(
             { item: req.params.item },
             { img: name }
           )
@@ -469,7 +393,7 @@ app.delete('/back/orders/:item', async (req, res) => {
 app.get('/webdata', async (req, res) => {
   try {
     // 拿頁面資料
-    let result = await db.pages.find()
+    let result = await dbpages.find()
     const pages = []
     for (const value of result) {
       if (value.show) {
