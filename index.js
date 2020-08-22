@@ -2,7 +2,7 @@ import express from 'express'
 import bodyParser from 'body-parser'
 import cors from 'cors'
 import multer from 'multer'
-import md5 from 'md5'
+// import md5 from 'md5'
 import dotenv from 'dotenv'
 import path from 'path'
 import FTPStorage from 'multer-ftp'
@@ -10,12 +10,12 @@ import jwt from 'jsonwebtoken'
 import axios from 'axios'
 import * as verify from './common/Verify.js'
 
-import db from './db.js'
-import dbusers from './models/user.js'
+import './db.js'
+// import dbusers from './models/user.js'
 import dbproducts from './models/product.js'
 import dbcategorys from './models/category.js'
 import dbpayments from './models/payment.js'
-import dborders from './models/order.js'
+// import dborders from './models/order.js'
 import dbpages from './models/page.js'
 
 import userRoutes from './routes/user.js'
@@ -24,6 +24,7 @@ import categoryRoutes from './routes/category.js'
 import paymentRoutes from './routes/payment.js'
 import orderRoutes from './routes/order.js'
 import pageRoutes from './routes/page.js'
+import loginRoutes from './routes/login.js'
 
 dotenv.config()
 
@@ -103,6 +104,7 @@ app.use('/categorys', categoryRoutes)
 app.use('/payments', paymentRoutes)
 app.use('/orders', orderRoutes)
 app.use('/pages', pageRoutes)
+app.use('/login', loginRoutes)
 
 // 監聽
 app.listen(process.env.PORT, () => {
@@ -120,83 +122,6 @@ app.listen(process.env.PORT, () => {
 //     res.redirect(req.headers.referer)
 //   }
 // })
-
-// 登入驗證
-app.post('/login', async (req, res) => {
-  try {
-    verify.contentTypeJSON(req)
-    const result = await dbusers.find(
-      {
-        account: req.body.account,
-        password: md5(req.body.password)
-      }
-    )
-
-    if (result.length > 0) {
-      // 登入成功簽token回去
-      const token = jwt.sign({
-        account: result[0].account,
-        access: result[0].access_right,
-        exp: Math.floor(Date.now() / 1000) + 60 * 30
-      }, process.env.JWT_KEY)
-
-      res.status(200)
-      res.send({ success: true, message: '會員登入成功', account: result[0].account, name: result[0].name, token })
-    } else {
-      res.status(404)
-      res.send({ success: false, message: '帳號密碼錯誤' })
-    }
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// 管理者登入驗證
-app.post('/back/login', async (req, res) => {
-  try {
-    verify.contentTypeJSON(req)
-    const result = await dbusers.find(
-      {
-        account: req.body.account,
-        password: md5(req.body.password)
-      }
-    )
-
-    if (result.length > 0) {
-      // 登入成功簽token回去
-      const token = jwt.sign({
-        account: result[0].account,
-        access: result[0].access_right,
-        exp: Math.floor(Date.now() / 1000) + 60 * 30
-      }, process.env.JWT_KEY)
-
-      let access = ''
-
-      if (result[0].access_right === parseInt(process.env.ACCESS_RIGHT_ADMINISTRATOR)) {
-        access = 'admin'
-      } else if (result[0].access_right === parseInt(process.env.ACCESS_RIGHT_EDITOR)) {
-        access = 'edtor'
-      } else {
-        res.status(403)
-        res.send({ success: false, message: '沒有權限' })
-        return
-      }
-
-      res.status(200)
-      res.send({ success: true, message: '登入成功', user: result[0].account, access, token })
-    } else {
-      res.status(404)
-      res.send({ success: false, message: '帳號密碼錯誤' })
-    }
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-app.delete('/logout', async (req, res) => {
-  res.status(200)
-  res.send({ success: true, message: '' })
-})
 
 app.get('/heartbeat', async (req, res) => {
   let isLogin = false
@@ -296,97 +221,6 @@ app.post('/img/:item', async (req, res) => {
       }
     }
   })
-})
-
-// 取得所有會員訂單
-app.get('/back/orders', async (req, res) => {
-  try {
-    verify.jwtVerify(req)
-    const result = await dborders.find()
-
-    const datas = []
-    const dbProducts = await dbproducts.find()
-    for (const value of result) {
-      const item = value.item
-      const account = value.account
-
-      // 計算訂單金額
-      let orderPrice = 0
-
-      // 找真正的商品資料
-      const products = []
-      for (const v of value.products) {
-        const product = dbProducts.find(e => e.item === v.item)
-        products.push({
-          item: product.item,
-          amount: v.amount,
-          name: product.name,
-          src: product.img,
-          price: product.price
-        })
-
-        orderPrice += product.price * v.amount
-      }
-
-      const payment = value.payment
-      orderPrice += value.payment.price
-
-      const remark = value.remark
-      const status = value.status
-
-      datas.push({
-        item,
-        account,
-        products,
-        payment,
-        orderPrice,
-        remark,
-        status
-      })
-    }
-
-    res.status(200)
-    res.send({ success: true, message: '資料查詢成功', datas })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-// 更新訂單
-app.patch('/back/orders/:item', async (req, res) => {
-  try {
-    verify.contentTypeJSON(req)
-    verify.jwtVerify(req)
-    const result = await dborders.findOneAndUpdate(
-      { item: req.params.item },
-      req.body
-    )
-
-    res.status(200)
-    res.send({ success: true, message: '商品更新成功', result })
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
-})
-
-app.delete('/back/orders/:item', async (req, res) => {
-  try {
-    verify.jwtVerify(req)
-
-    const result = await dborders.findOneAndDelete(
-      { item: req.params.item }
-    )
-
-    if (result) {
-      res.status(200)
-      res.send({ success: true, message: '資料已移除', result })
-    } else {
-      res.status(404)
-      res.send({ success: false, message: '沒有這個東西' })
-    }
-  } catch (error) {
-    verify.ErrorResponse(error, res)
-  }
 })
 
 // 前台拿網頁資料

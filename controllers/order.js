@@ -1,4 +1,4 @@
-import db from '../models/order.js'
+import dborders from '../models/order.js'
 import dbproducts from '../models/product.js'
 import * as verify from '../common/Verify.js'
 
@@ -22,7 +22,7 @@ export const createOrder = async (req, res) => {
   try {
     verify.contentTypeJSON(req)
     const JWTData = verify.jwtVerify(req)
-    await db.create(
+    await dborders.create(
       {
         item: Date.now(),
         account: JWTData.account,
@@ -41,12 +41,16 @@ export const createOrder = async (req, res) => {
 export const getOrders = async (req, res) => {
   try {
     const JWTData = verify.jwtVerify(req)
-    const result = await db.find({ account: JWTData.account })
+    const isAdmin = JWTData.access === parseInt(process.env.ACCESS_RIGHT_ADMINISTRATOR)
+    const result = isAdmin ? await dborders.find() : await dborders.find({ account: JWTData.account })
 
     const datas = []
     const dbProducts = await dbproducts.find()
     for (const value of result) {
-      const item = value.item
+      const { item, account, payment, remark, status } = value
+
+      // 計算訂單金額
+      let orderPrice = 0
 
       // 找真正的商品資料
       const products = []
@@ -59,19 +63,33 @@ export const getOrders = async (req, res) => {
           src: product.img,
           price: product.price
         })
+
+        orderPrice += product.price * v.amount
       }
 
-      const payment = value.payment
-      const remark = value.remark
-      const status = value.status
+      // 加運費
+      orderPrice += payment.price
 
-      datas.push({
-        item,
-        products,
-        payment,
-        remark,
-        status
-      })
+      if (isAdmin) {
+        datas.push({
+          item,
+          account,
+          products,
+          payment,
+          orderPrice,
+          remark,
+          status
+        })
+      } else {
+        datas.push({
+          item,
+          products,
+          payment,
+          orderPrice,
+          remark,
+          status
+        })
+      }
     }
 
     res.status(200)
@@ -84,12 +102,12 @@ export const getOrders = async (req, res) => {
 export const getOrderDetail = async (req, res) => {
   try {
     const JWTData = verify.jwtVerify(req)
-    const result = await db.find({ account: JWTData.account, item: req.params.item })
+    const result = await dborders.find({ account: JWTData.account, item: req.params.item })
 
     const datas = []
     const dbProducts = await dbproducts.find()
     for (const value of result) {
-      const item = value.item
+      const { item, payment, remark, status } = value
 
       // 找真正的商品資料
       const products = []
@@ -103,10 +121,6 @@ export const getOrderDetail = async (req, res) => {
           price: product.price
         })
       }
-
-      const payment = value.payment
-      const remark = value.remark
-      const status = value.status
 
       datas.push({
         item,
@@ -125,9 +139,37 @@ export const getOrderDetail = async (req, res) => {
 }
 
 export const updateOrder = async (req, res) => {
+  try {
+    verify.contentTypeJSON(req)
+    verify.jwtVerify(req)
+    const result = await dborders.findOneAndUpdate(
+      { item: req.params.item },
+      req.body
+    )
 
+    res.status(200)
+    res.send({ success: true, message: '商品更新成功', result })
+  } catch (error) {
+    verify.ErrorResponse(error, res)
+  }
 }
 
 export const deleteOrder = async (req, res) => {
+  try {
+    verify.jwtVerify(req)
 
+    const result = await dborders.findOneAndDelete(
+      { item: req.params.item }
+    )
+
+    if (result) {
+      res.status(200)
+      res.send({ success: true, message: '資料已移除', result })
+    } else {
+      res.status(404)
+      res.send({ success: false, message: '沒有這個東西' })
+    }
+  } catch (error) {
+    verify.ErrorResponse(error, res)
+  }
 }
